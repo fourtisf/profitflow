@@ -1,0 +1,22 @@
+# Secrets — validate.js reads HELIUS_API_KEY. Never commit keys.
+.env
+.env.*
+*.local
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build / artifacts
+dist/
+build/
+*.png
+!landing-page/**/*.png
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

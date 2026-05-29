@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ProfitFlow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#08090a;
+    --bg-2:#0c0d0f;
+    --panel:#0e0f11;
+    --line:rgba(255,255,255,.07);
+    --line-2:rgba(255,255,255,.12);
+    --white:#fafafa;
+    --gray:#a1a1aa;
+    --muted:#71717a;
+    --faint:#4b4d52;
+    --green:#5fd39a;
+    --green-dim:#3f8f69;
+    --mono:'IBM Plex Mono',ui-monospace,monospace;
+    --sans:'Hanken Grotesk',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--bg);color:var(--white);font-family:var(--sans);font-weight:400;
+    line-height:1.5;-webkit-font-smoothing:antialiased;overflow-x:hidden;letter-spacing:-.005em;
+  }
+  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:radial-gradient(600px 360px at 50% -8%,rgba(255,255,255,.045),transparent 70%)}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 32px;position:relative;z-index:2}
+  .narrow{max-width:760px;margin:0 auto}
+  a{color:inherit;text-decoration:none}
+
+  /* NAV */
+  nav{position:sticky;top:0;z-index:50;border-bottom:1px solid var(--line);
+    background:rgba(8,9,10,.7);backdrop-filter:blur(16px)}
+  .nav-in{display:flex;align-items:center;justify-content:space-between;height:64px}
+  .logo{font-weight:600;font-size:16px;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--green)}
+  .nlinks{display:flex;gap:32px}
+  .nlinks a{color:var(--muted);font-size:14px;transition:color .2s}
+  .nlinks a:hover{color:var(--white)}
+  .btn{font-family:var(--sans);font-weight:500;font-size:14px;cursor:pointer;border-radius:8px;
+    padding:9px 16px;display:inline-flex;align-items:center;gap:7px;transition:.18s;border:1px solid transparent;letter-spacing:-.01em}
+  .btn-w{background:var(--white);color:#0a0a0a}
+  .btn-w:hover{background:#e4e4e7}
+  .btn-o{border-color:var(--line-2);color:var(--gray)}
+  .btn-o:hover{border-color:var(--white);color:var(--white)}
+
+  /* HERO */
+  .hero{padding:120px 0 0;text-align:center}
+  .badge{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;
+    color:var(--gray);border:1px solid var(--line);border-radius:100px;padding:6px 13px;margin-bottom:38px}
+  .ldot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:bl 2.4s infinite}
+  @keyframes bl{0%,100%{opacity:1}50%{opacity:.25}}
+  h1{font-weight:600;font-size:clamp(40px,6vw,72px);line-height:1.02;letter-spacing:-.045em;margin-bottom:24px}
+  h1 .sub2{color:var(--muted);display:block}
+  .lead{font-size:19px;color:var(--gray);font-weight:300;max-width:540px;margin:0 auto 36px;line-height:1.55}
+  .cta{display:flex;gap:12px;justify-content:center;align-items:center}
+  .cta .btn{padding:12px 22px;font-size:15px}
+  .note{font-family:var(--mono);font-size:12px;color:var(--faint);margin-top:22px}
+
+  /* FEED PANEL */
+  .panel{margin-top:80px;border:1px solid var(--line);border-radius:14px;background:var(--panel);
+    overflow:hidden;text-align:left;box-shadow:0 30px 80px -40px rgba(0,0,0,.9)}
+  .p-bar{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--line)}
+  .p-bar .l{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-size:12px;color:var(--muted)}
+  .p-bar .r{font-family:var(--mono);font-size:12px;color:var(--faint)}
+  .p-bar .r b{color:var(--green);font-weight:600}
+  .feed{height:340px;overflow:hidden;position:relative}
+  .feed::after{content:"";position:absolute;bottom:0;left:0;right:0;height:70px;
+    background:linear-gradient(transparent,var(--panel));pointer-events:none;z-index:3}
+  .row{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;
+    padding:15px 20px;border-bottom:1px solid var(--line);animation:fade .55s ease both}
+  @keyframes fade{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+  .r-l{display:flex;flex-direction:column;gap:5px;min-width:0}
+  .r-top{font-family:var(--mono);font-size:14px;display:flex;align-items:center;gap:10px}
+  .tkr{font-weight:600;color:var(--white)}
+  .wal{color:var(--faint);font-size:12px}
+  .r-meta{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+  .r-meta .ar{color:var(--faint);margin:0 6px}
+  .r-r{text-align:right;display:flex;flex-direction:column;gap:3px;align-items:flex-end}
+  .pnl{font-family:var(--mono);font-weight:600;font-size:17px;color:var(--green);letter-spacing:-.01em}
+  .mlt{font-family:var(--mono);font-size:11px;color:var(--green-dim)}
+  .ago{font-family:var(--mono);font-size:10.5px;color:var(--faint);margin-top:1px}
+
+  /* SECTIONS */
+  section{padding:140px 0}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--green-dim);
+    text-transform:uppercase;margin-bottom:20px}
+  h2{font-weight:600;font-size:clamp(28px,4vw,42px);letter-spacing:-.035em;line-height:1.08}
+
+  /* ANGLE — quiet editorial */
+  .angle{text-align:center}
+  .angle h2{max-width:680px;margin:0 auto}
+  .angle h2 em{font-style:normal;color:var(--green)}
+  .angle p{color:var(--muted);font-size:17px;font-weight:300;max-width:520px;margin:26px auto 0;line-height:1.6}
+
+  /* FEATURES — clean list, hairlines, no boxes */
+  .feat-head{margin-bottom:64px}
+  .feat-head h2{max-width:520px}
+  .feat{display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid var(--line)}
+  .f{padding:34px 0;border-bottom:1px solid var(--line)}
+  .f:nth-child(odd){padding-right:48px;border-right:1px solid var(--line)}
+  .f:nth-child(even){padding-left:48px}
+  .f .n{font-family:var(--mono);font-size:12px;color:var(--faint);margin-bottom:14px}
+  .f h3{font-weight:600;font-size:19px;letter-spacing:-.02em;margin-bottom:9px}
+  .f p{color:var(--muted);font-size:15px;font-weight:300;line-height:1.6}
+
+  /* PRICING */
+  .pr-head{text-align:center;margin-bottom:60px}
+  .pr-head h2{max-width:460px;margin:0 auto}
+  .plans{display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:760px;margin:0 auto}
+  .plan{border:1px solid var(--line);border-radius:14px;padding:34px}
+  .plan.pro{border-color:var(--line-2)}
+  .pn{font-family:var(--mono);font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:18px}
+  .pp{font-weight:600;font-size:42px;letter-spacing:-.03em;line-height:1}
+  .pp small{font-size:15px;font-weight:300;color:var(--faint);letter-spacing:0}
+  .plan ul{list-style:none;margin:28px 0 30px}
+  .plan li{display:flex;gap:11px;align-items:center;padding:10px 0;font-size:14.5px;color:var(--gray);font-weight:300;border-bottom:1px solid var(--line)}
+  .plan li:last-child{border-bottom:none}
+  .plan li .ch{color:var(--green);font-family:var(--mono);font-size:13px}
+  .plan li.off{color:var(--faint)}
+  .plan li.off .ch{color:var(--faint)}
+  .plan .btn{width:100%;justify-content:center;padding:12px}
+
+  /* FOOTER */
+  footer{border-top:1px solid var(--line);padding:40px 0 56px}
+  .foot{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px}
+  .foot .fl{display:flex;gap:26px}
+  .foot .fl a{color:var(--muted);font-size:13px}
+  .foot .fl a:hover{color:var(--white)}
+  .foot .cc{font-family:var(--mono);font-size:12px;color:var(--faint)}
+  .disc{margin-top:26px;font-size:11.5px;color:var(--faint);max-width:600px;line-height:1.65;font-weight:300}
+
+  .rv{opacity:0;transform:translateY(20px);transition:opacity .7s,transform .7s}
+  .rv.in{opacity:1;transform:none}
+  .stagger>*{opacity:0;transform:translateY(18px);animation:up .7s ease forwards}
+  @keyframes up{to{opacity:1;transform:none}}
+  .stagger>*:nth-child(1){animation-delay:.05s}
+  .stagger>*:nth-child(2){animation-delay:.15s}
+  .stagger>*:nth-child(3){animation-delay:.25s}
+  .stagger>*:nth-child(4){animation-delay:.35s}
+  .stagger>*:nth-child(5){animation-delay:.45s}
+
+  /* PROOF / LEDGER */
+  .proof-head{text-align:center;margin-bottom:56px}
+  .proof-head h2{margin-bottom:20px}
+  .proof-head p{color:var(--muted);font-size:16px;font-weight:300;max-width:520px;margin:0 auto;line-height:1.6}
+  .ledger{max-width:720px;margin:0 auto;border:1px solid var(--line);border-radius:14px;background:var(--panel);overflow:hidden}
+  .ledger-top{display:flex;justify-content:space-between;align-items:flex-start;padding:22px 24px;border-bottom:1px solid var(--line)}
+  .lg-tkr{font-family:var(--mono);font-size:16px;font-weight:600}
+  .lg-tkr span{color:var(--faint);font-weight:400;font-size:13px;margin-left:8px}
+  .lg-cap{font-size:12.5px;color:var(--muted);margin-top:6px;font-weight:300}
+  .lg-badge{font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--green);border:1px solid rgba(95,211,154,.3);border-radius:6px;padding:5px 9px;white-space:nowrap}
+  .lg-row{display:grid;grid-template-columns:62px 1fr auto auto;gap:16px;align-items:center;padding:13px 24px;font-family:var(--mono);font-size:13px;border-bottom:1px solid var(--line)}
+  .lg-tag{font-size:10px;letter-spacing:.06em;color:var(--muted);border:1px solid var(--line-2);border-radius:5px;padding:3px 0;text-align:center}
+  .lg-tag.sell{color:var(--green);border-color:rgba(95,211,154,.35)}
+  .lg-d{color:var(--muted)}
+  .lg-amt{color:var(--gray)}
+  .lg-amt.out{color:var(--green);font-weight:600}
+  .lg-tx{color:var(--faint);font-size:12px;cursor:pointer;transition:color .2s}
+  .lg-tx:hover{color:var(--gray)}
+  .lg-foot{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;background:rgba(255,255,255,.015)}
+  .lg-calc{font-family:var(--mono);font-size:13px;color:var(--muted)}
+  .lg-calc b{color:var(--gray);font-weight:600}
+  .lg-result{font-family:var(--mono);font-size:15px;color:var(--gray)}
+  .lg-result b{color:var(--green);font-size:18px;font-weight:600;margin-left:4px}
+  .lg-result span{color:var(--green-dim);margin-left:8px;font-size:13px}
+  .sources{text-align:center;font-family:var(--mono);font-size:12px;color:var(--faint);margin-top:28px;font-weight:300;line-height:1.8}
+
+  /* SHARE CARD */
+  .share-grid{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}
+  .share-copy h2{margin-bottom:18px}
+  .share-copy p{color:var(--muted);font-size:16px;font-weight:300;line-height:1.6;margin-bottom:30px;max-width:380px}
+  .share-btns{display:flex;gap:12px}
+  .share-btns .btn{padding:11px 18px;font-family:var(--mono);font-size:13px}
+  .share-stage{display:flex;justify-content:center}
+  .scard{width:100%;max-width:400px;aspect-ratio:1/1;background:var(--bg-2);border:1px solid var(--line-2);border-radius:20px;padding:32px;display:flex;flex-direction:column;box-shadow:0 30px 70px -30px rgba(0,0,0,.9)}
+  .sc-top{display:flex;justify-content:space-between;align-items:center}
+  .sc-logo{display:flex;align-items:center;gap:7px;font-weight:600;font-size:15px}
+  .sc-badge{font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--muted)}
+  .sc-main{margin-top:auto}
+  .sc-tkr{font-family:var(--mono);font-size:18px;color:var(--gray)}
+  .sc-pnl{font-family:var(--mono);font-weight:600;font-size:clamp(34px,8vw,50px);color:var(--green);letter-spacing:-.02em;line-height:1;margin-top:8px;white-space:nowrap}
+  .sc-mult{font-family:var(--mono);font-size:14px;color:var(--green-dim);margin-top:12px}
+  .sc-flow{font-family:var(--mono);font-size:13px;color:var(--muted);margin-top:18px;display:flex;gap:10px;align-items:center}
+  .sc-arr{color:var(--faint)}
+  .sc-foot{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;color:var(--faint);margin-top:24px;padding-top:20px;border-top:1px solid var(--line)}
+
+  @media(max-width:760px){
+    .nlinks{display:none}
+    section{padding:96px 0}.hero{padding:80px 0 0}
+    .feat,.plans{grid-template-columns:1fr}
+    .f:nth-child(odd){padding-right:0;border-right:none}
+    .f:nth-child(even){padding-left:0}
+    .share-grid{grid-template-columns:1fr;gap:40px}
+    .lg-row{grid-template-columns:52px 1fr auto;gap:10px;font-size:12px}
+    .lg-row .lg-tx{display:none}
+    .lg-foot{flex-direction:column;gap:10px;align-items:flex-start}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-in">
+    <div class="logo"><span class="dot"></span> ProfitFlow</div>
+    <div class="nlinks">
+      <a href="#angle">Why</a>
+      <a href="#proof">Proof</a>
+      <a href="#features">Features</a>
+      <a href="#share">Share</a>
+    </div>
+    <a href="#" class="btn btn-w">Launch App</a>
+  </div>
+</nav>
+
+<header class="wrap hero">
+  <div class="stagger">
+    <span class="badge"><span class="ldot"></span> Live on Solana</span>
+    <h1>Everyone tracks the buys.<span class="sub2">We track the cash-out.</span></h1>
+    <p class="lead">A real-time terminal for realized profit. Watch wallets take money off the table the moment it lands on-chain — ranked by dollars.</p>
+    <div class="cta">
+      <a href="#" class="btn btn-w">Open the feed</a>
+      <a href="#angle" class="btn btn-o">Why realized →</a>
+    </div>
+    <div class="note">No signup · No wallet connect · Free to watch</div>
+  </div>
+
+  <div class="panel rv">
+    <div class="p-bar">
+      <div class="l"><span class="ldot"></span> live feed</div>
+      <div class="r">today &nbsp;<b id="t-total">$0</b></div>
+    </div>
+    <div class="feed" id="feed"></div>
+  </div>
+</header>
+
+<section id="angle">
+  <div class="wrap angle rv">
+    <div class="kicker">The angle</div>
+    <h2>Buying is noise.<br><em>Selling is signal.</em></h2>
+    <p>A thousand tools scream every time a whale buys. None tell you the part that matters — when smart money walks away with the bag full. We show that, the second it clears.</p>
+  </div>
+</section>
+
+<section id="proof">
+  <div class="wrap">
+    <div class="proof-head rv">
+      <div class="kicker">The receipts</div>
+      <h2>Every number, traceable<br>to the chain.</h2>
+      <p>We don't guess. Each realized figure is rebuilt from the wallet's real transaction history — every buy, every sell, on-chain and verifiable.</p>
+    </div>
+    <div class="ledger rv">
+      <div class="ledger-top">
+        <div>
+          <div class="lg-tkr">$GIGA <span>Kd4m…8sQe</span></div>
+          <div class="lg-cap">Reconstructed cost basis · 3 entries → 1 exit</div>
+        </div>
+        <div class="lg-badge">ON-CHAIN</div>
+      </div>
+      <div>
+        <div class="lg-row"><span class="lg-tag">BUY</span><span class="lg-d">Apr 02 · 14:22</span><span class="lg-amt">−$4,100</span><span class="lg-tx">5Hk…q2P ↗</span></div>
+        <div class="lg-row"><span class="lg-tag">BUY</span><span class="lg-d">Apr 02 · 18:51</span><span class="lg-amt">−$6,300</span><span class="lg-tx">9bR…7fT ↗</span></div>
+        <div class="lg-row"><span class="lg-tag">BUY</span><span class="lg-d">Apr 03 · 09:10</span><span class="lg-amt">−$2,600</span><span class="lg-tx">Kd4…m8s ↗</span></div>
+        <div class="lg-row"><span class="lg-tag sell">SELL</span><span class="lg-d">Apr 05 · 21:47</span><span class="lg-amt out">+$641,200</span><span class="lg-tx">7nB…v5x ↗</span></div>
+      </div>
+      <div class="lg-foot">
+        <div class="lg-calc">Cost basis <b>$13,000</b> &nbsp;·&nbsp; Proceeds <b>$641,200</b></div>
+        <div class="lg-result">Realized <b>+$628,200</b> <span>49.3×</span></div>
+      </div>
+    </div>
+    <div class="sources rv">pump.fun · Raydium · Meteora &nbsp;—&nbsp; cost basis from full wallet history &nbsp;—&nbsp; wash trades, MEV &amp; LP moves filtered out</div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <div class="feat-head rv">
+      <div class="kicker">Features</div>
+      <h2>A feed you keep open all day.</h2>
+    </div>
+    <div class="feat rv">
+      <div class="f"><div class="n">01</div><h3>Realized PnL engine</h3><p>True cost basis reconstructed from each wallet's full on-chain history, profit computed the moment a sell clears. The real number — not a guess from one transaction.</p></div>
+      <div class="f"><div class="n">02</div><h3>Auto share cards</h3><p>Every large exit generates a clean, branded card built to be screenshotted. Your users handle distribution — each share is a billboard.</p></div>
+      <div class="f"><div class="n">03</div><h3>Wallet radar</h3><p>Follow the wallets that keep topping the board. Get pinged the second they cash out again, before it hits the public feed.</p></div>
+      <div class="f"><div class="n">04</div><h3>Sub-second stream</h3><p>A Geyser stream straight off the validator. Exits surface in seconds, not minutes — you see the cash-out while it's still warm.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="share">
+  <div class="wrap">
+    <div class="share-grid">
+      <div class="share-copy rv">
+        <div class="kicker">Built to spread</div>
+        <h2>One screenshot does the marketing.</h2>
+        <p>Every big exit becomes a clean, branded card. Your users post it, their followers ask what it is — and the feed grows itself.</p>
+        <div class="share-btns">
+          <button class="btn btn-o" id="shuffle">↻ Shuffle</button>
+          <button class="btn btn-w" id="download">↓ Download PNG</button>
+        </div>
+      </div>
+      <div class="share-stage rv">
+        <div class="scard" id="scard">
+          <div class="sc-top"><span class="sc-logo"><span class="dot"></span> ProfitFlow</span><span class="sc-badge">REALIZED</span></div>
+          <div class="sc-main">
+            <div class="sc-tkr" id="sc-tkr">$GIGA</div>
+            <div class="sc-pnl" id="sc-pnl">+$628,200</div>
+            <div class="sc-mult" id="sc-mult">49.3× return</div>
+            <div class="sc-flow"><span id="sc-in">in $13.0K</span><span class="sc-arr">→</span><span id="sc-out">out $641.2K</span></div>
+          </div>
+          <div class="sc-foot"><span id="sc-wal">Kd4m…8sQe</span><span>profitflow.io</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <div class="logo"><span class="dot"></span> ProfitFlow</div>
+      <div class="fl"><a href="#">X</a><a href="#">Telegram</a><a href="#">Docs</a><a href="#">API</a></div>
+      <div class="cc">© 2026</div>
+    </div>
+    <p class="disc">Profit figures are estimates from public on-chain data and reconstructed cost basis. Transfers, airdrops and cross-wallet activity may affect accuracy. Analytics tool, not financial advice. Figures shown here are illustrative.</p>
+  </div>
+</footer>
+
+<script>
+const tokens=['$WIF','$POPCAT','$MOODENG','$GIGA','$PNUT','$BONK','$MEW','$FWOG','$GOAT','$ZEREBRO','$AI16Z','$CHILLGUY','$PONKE'];
+const hex='0123456789abcdefGHJKLMNPQRSTUVWXYZ';
+function wallet(){let a='',b='';for(let i=0;i<4;i++)a+=hex[Math.random()*hex.length|0];for(let i=0;i<4;i++)b+=hex[Math.random()*hex.length|0];return a+'…'+b}
+function fmt(n){return n>=1e6?'$'+(n/1e6).toFixed(2)+'M':n>=1e3?'$'+(n/1e3).toFixed(1)+'K':'$'+Math.round(n)}
+function full(n){return '$'+Math.round(n).toLocaleString('en-US')}
+const feed=document.getElementById('feed'),tT=document.getElementById('t-total');
+let total=0;
+function ev(){const big=Math.random()<0.16;const pnl=big?80000+Math.random()*700000:1000+Math.random()*48000;const mult=big?(12+Math.random()*180):(1.4+Math.random()*18);const entry=pnl/(mult-1);return{pnl,mult,entry,tkr:tokens[Math.random()*tokens.length|0],w:wallet()}}
+function render(e){
+  const r=document.createElement('div');r.className='row';
+  r.innerHTML=`<div class="r-l"><div class="r-top"><span class="tkr">${e.tkr}</span><span class="wal">${e.w}</span></div>
+  <div class="r-meta">in ${fmt(e.entry)}<span class="ar">→</span>out ${fmt(e.entry+e.pnl)}</div></div>
+  <div class="r-r"><span class="pnl">+${full(e.pnl)}</span><span class="mlt">${e.mult.toFixed(1)}×</span><span class="ago">just now</span></div>`;
+  feed.prepend(r);while(feed.children.length>7)feed.removeChild(feed.lastChild);
+  [...feed.children].forEach((c,i)=>{const a=c.querySelector('.ago');if(i>0&&a&&a.textContent==='just now')a.textContent=(i*3+(Math.random()*3|0))+'s ago'});
+  total+=e.pnl;anim(total);
+}
+function anim(t){const s=parseFloat(tT.dataset.v||0);tT.dataset.v=t;const t0=performance.now();
+  (function st(n){const p=Math.min((n-t0)/600,1);tT.textContent=fmt(s+(t-s)*(1-Math.pow(1-p,3)));if(p<1)requestAnimationFrame(st)})(t0)}
+for(let i=0;i<6;i++)render(ev());
+[...feed.children].forEach((c,i)=>{const a=c.querySelector('.ago');if(a)a.textContent=(i*4+2)+'s ago'});
+(function loop(){render(ev());setTimeout(loop,1600+Math.random()*2400)})();
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.1});
+document.querySelectorAll('.rv').forEach(el=>io.observe(el));
+
+// ---------- share card ----------
+const examples=[
+  {tkr:'$GIGA',pnl:628200,mult:49.3,inN:13000,outN:641200,wal:'Kd4m…8sQe'},
+  {tkr:'$WIF',pnl:1240000,mult:222,inN:5600,outN:1245600,wal:'3fTz…9bRc'},
+  {tkr:'$POPCAT',pnl:312800,mult:38.2,inN:8400,outN:321200,wal:'Ap7k…2vNw'},
+  {tkr:'$MOODENG',pnl:94300,mult:12.7,inN:8050,outN:102350,wal:'9xQk…7mPa'},
+  {tkr:'$PNUT',pnl:476900,mult:64.5,inN:7500,outN:484400,wal:'7nBv…5xLt'},
+];
+const $=id=>document.getElementById(id);
+let cur=examples[0];
+function setCard(e){cur=e;
+  $('sc-tkr').textContent=e.tkr;$('sc-pnl').textContent='+'+full(e.pnl);
+  $('sc-mult').textContent=e.mult.toFixed(1)+'× return';
+  $('sc-in').textContent='in '+fmt(e.inN);$('sc-out').textContent='out '+fmt(e.outN);
+  $('sc-wal').textContent=e.wal;
+}
+$('shuffle').onclick=()=>setCard(examples[Math.random()*examples.length|0]);
+
+function rr(x,a,b,w,h,r){x.beginPath();x.moveTo(a+r,b);x.arcTo(a+w,b,a+w,b+h,r);x.arcTo(a+w,b+h,a,b+h,r);x.arcTo(a,b+h,a,b,r);x.arcTo(a,b,a+w,b,r);x.closePath()}
+async function drawCard(){
+  await document.fonts.ready;
+  const c=document.createElement('canvas');c.width=1080;c.height=1080;const x=c.getContext('2d');
+  x.fillStyle='#08090a';x.fillRect(0,0,1080,1080);
+  x.fillStyle='#0c0d0f';rr(x,60,60,960,960,44);x.fill();
+  x.strokeStyle='rgba(255,255,255,.12)';x.lineWidth=2;rr(x,60,60,960,960,44);x.stroke();
+  x.textBaseline='middle';x.textAlign='left';
+  x.fillStyle='#5fd39a';x.beginPath();x.arc(132,158,9,0,7);x.fill();
+  x.fillStyle='#fafafa';x.font='600 36px "Hanken Grotesk"';x.fillText('ProfitFlow',156,160);
+  x.textAlign='right';x.fillStyle='#71717a';x.font='500 22px "IBM Plex Mono"';x.fillText('REALIZED',960,160);x.textAlign='left';
+  x.fillStyle='#a1a1aa';x.font='500 44px "IBM Plex Mono"';x.fillText(cur.tkr,120,560);
+  const txt='+'+full(cur.pnl);let fs=148;x.font=`600 ${fs}px "IBM Plex Mono"`;
+  while(x.measureText(txt).width>820&&fs>64){fs-=4;x.font=`600 ${fs}px "IBM Plex Mono"`}
+  x.fillStyle='#5fd39a';x.fillText(txt,118,672);
+  x.fillStyle='#3f8f69';x.font='500 38px "IBM Plex Mono"';x.fillText(cur.mult.toFixed(1)+'× return',122,752);
+  x.fillStyle='#71717a';x.font='400 32px "IBM Plex Mono"';x.fillText('in '+fmt(cur.inN)+'   →   out '+fmt(cur.outN),120,838);
+  x.strokeStyle='rgba(255,255,255,.10)';x.lineWidth=1.5;x.beginPath();x.moveTo(120,910);x.lineTo(960,910);x.stroke();
+  x.fillStyle='#71717a';x.font='400 30px "IBM Plex Mono"';x.fillText(cur.wal,120,968);
+  x.textAlign='right';x.fillStyle='#4b4d52';x.fillText('profitflow.io',960,968);
+  return c;
+}
+$('download').onclick=async()=>{
+  const btn=$('download');const t=btn.textContent;btn.textContent='Rendering…';
+  try{const c=await drawCard();c.toBlob(b=>{const u=URL.createObjectURL(b);const l=document.createElement('a');
+    l.href=u;l.download='profitflow-'+cur.tkr.replace('$','')+'.png';l.click();URL.revokeObjectURL(u);btn.textContent=t})}
+  catch(e){btn.textContent=t}
+};
+</script>
+</body>
+</html>

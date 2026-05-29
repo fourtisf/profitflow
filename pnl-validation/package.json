@@ -1,0 +1,15 @@
+{
+  "name": "profitflow-pnl-validation",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Realized-PnL validation kit for ProfitFlow. Pure, dependency-free engine + tests + Helius validator.",
+  "main": "pnl-engine.js",
+  "scripts": {
+    "test": "node pnl-engine.test.js",
+    "validate": "node validate.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "UNLICENSED"
+}
