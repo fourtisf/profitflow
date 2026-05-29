@@ -6,7 +6,7 @@
 // Compare the printed ledger line-by-line against Solscan to verify accuracy (HANDOFF Task 1).
 //
 // Requires Node 18+ (global fetch).
-import { computeAverageCost, computeFIFO, type PositionEvent } from '../src/engine.js';
+import { computeAverageCost, computeFIFO, type PositionEvent } from '../src/engine';
 
 const KEY = process.env.HELIUS_API_KEY;
 const [, , WALLET, MINT, SOL_USD_ARG] = process.argv;

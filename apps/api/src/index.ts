@@ -1,8 +1,8 @@
 import http from 'node:http';
-import { createDataSource } from './datasource.js';
-import { env } from './env.js';
-import { createApp } from './http.js';
-import { attachWebSocket } from './ws.js';
+import { createDataSource } from './datasource';
+import { env } from './env';
+import { createApp } from './http';
+import { attachWebSocket } from './ws';
 
 async function main(): Promise<void> {
   const ds = createDataSource();

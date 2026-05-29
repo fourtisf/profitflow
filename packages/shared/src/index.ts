@@ -1,7 +1,7 @@
-export { config, tierFor } from './config.js';
-export type { Tier } from './config.js';
+export { config, tierFor } from './config';
+export type { Tier } from './config';
 
-export { fmtUsd, fullUsd, signedUsd, shortWallet } from './format.js';
+export { fmtUsd, fullUsd, signedUsd, shortWallet } from './format';
 
 export type {
   Source,
@@ -11,10 +11,10 @@ export type {
   WalletProfile,
   WsServerMessage,
   WsClientMessage,
-} from './types.js';
+} from './types';
 
-export { BaseDataSource } from './datasource.js';
-export type { DataSource, ExitListener } from './datasource.js';
+export { BaseDataSource } from './datasource';
+export type { DataSource, ExitListener } from './datasource';
 
-export { SimDataSource } from './sim.js';
-export type { SimOptions } from './sim.js';
+export { SimDataSource } from './sim';
+export type { SimOptions } from './sim';

@@ -1,7 +1,7 @@
 import { Redis } from 'ioredis';
 import { Pool } from 'pg';
 import { BaseDataSource, SimDataSource, type DataSource, type RealizedExit, type Source, type Tier } from '@profitflow/shared';
-import { env } from './env.js';
+import { env } from './env';
 
 /**
  * Live source for `DATA_SOURCE=helius`. The worker (M3) is the producer: it ingests from Helius,

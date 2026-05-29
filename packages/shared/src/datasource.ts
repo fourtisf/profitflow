@@ -1,11 +1,11 @@
 import { round } from '@profitflow/pnl-engine';
-import type { Tier } from './config.js';
+import type { Tier } from './config';
 import type {
   LeaderboardEntry,
   LeaderboardRange,
   RealizedExit,
   WalletProfile,
-} from './types.js';
+} from './types';
 
 export type ExitListener = (exit: RealizedExit) => void;
 

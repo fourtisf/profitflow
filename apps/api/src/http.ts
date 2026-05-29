@@ -1,8 +1,8 @@
 import cors from 'cors';
 import express, { type Express, type Request, type Response } from 'express';
 import { config, type DataSource, type LeaderboardRange, type Tier } from '@profitflow/shared';
-import { env } from './env.js';
-import { createInMemoryFollows, createInMemoryWaitlist, isEmail } from './store.js';
+import { env } from './env';
+import { createInMemoryFollows, createInMemoryWaitlist, isEmail } from './store';
 
 function resolveTier(req: Request): Tier {
   const raw = (req.query.tier as string | undefined) ?? req.header('x-pf-tier') ?? 'free';

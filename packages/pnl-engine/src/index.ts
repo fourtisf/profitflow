@@ -2,7 +2,7 @@ export {
   computeAverageCost,
   computeFIFO,
   round,
-} from './engine.js';
+} from './engine';
 
 export type {
   EventKind,
@@ -10,4 +10,4 @@ export type {
   LedgerEntry,
   AverageCostResult,
   FifoResult,
-} from './engine.js';
+} from './engine';

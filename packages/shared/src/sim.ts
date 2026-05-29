@@ -1,8 +1,8 @@
 import { computeAverageCost, type PositionEvent } from '@profitflow/pnl-engine';
-import { BaseDataSource } from './datasource.js';
-import { config, tierFor } from './config.js';
-import { shortWallet } from './format.js';
-import type { RealizedExit, Source } from './types.js';
+import { BaseDataSource } from './datasource';
+import { config, tierFor } from './config';
+import { shortWallet } from './format';
+import type { RealizedExit, Source } from './types';
 
 // Ported from the approved landing page's simulator, but routed through the REAL engine so the
 // numbers (and the transfer_in / unverified-basis trap) behave exactly like live data will.

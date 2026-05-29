@@ -1,4 +1,4 @@
-import type { Tier } from './config.js';
+import type { Tier } from './config';
 
 /** Venues we display (HANDOFF locked decision #4). */
 export type Source = 'pump.fun' | 'Raydium' | 'Meteora';

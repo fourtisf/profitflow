@@ -1,6 +1,6 @@
 // engine.test.ts — run: pnpm --filter @profitflow/pnl-engine test  (tsx test/engine.test.ts)
 // Ported verbatim from the validated pnl-engine.test.js. 14 assertions, must stay green.
-import { computeAverageCost, computeFIFO, type PositionEvent } from '../src/engine.js';
+import { computeAverageCost, computeFIFO, type PositionEvent } from '../src/engine';
 
 let pass = 0,
   fail = 0;

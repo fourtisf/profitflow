@@ -1,7 +1,7 @@
 // sim.test.ts — run: pnpm --filter @profitflow/shared test
 // Verifies the SimDataSource produces live-shaped, engine-backed exits and that the
 // BaseDataSource buffer/leaderboard/wallet/tier-gating all behave.
-import { SimDataSource, config, tierFor } from '../src/index.js';
+import { SimDataSource, config, tierFor } from '../src/index';
 
 let pass = 0,
   fail = 0;
