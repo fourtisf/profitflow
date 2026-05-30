@@ -23,6 +23,11 @@ coverage/
 *.tsbuildinfo
 *.png
 !landing-page/**/*.png
+!brand/**/*.png
+
+# Brand-asset build scratch (downloaded fonts + local regen output)
+.assets-build/
+brand/fonts/
 
 # OS / editor
 .DS_Store
