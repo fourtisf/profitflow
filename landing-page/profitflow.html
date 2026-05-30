@@ -3,20 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ProfitFlow — track the cash-out, not the buys</title>
+<title>ExitRadar — track the cash-out, not the buys</title>
 <meta name="description" content="A real-time terminal for realized profit on Solana. Watch wallets take money off the table — ranked by dollars — the moment a sell clears.">
 <meta name="theme-color" content="#08090a">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2308090a'/%3E%3Ccircle cx='16' cy='16' r='8' fill='%235fd39a'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2308090a'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23ffffff' stroke-opacity='.28' stroke-width='1.6'/%3E%3Ccircle cx='16' cy='16' r='4.5' fill='none' stroke='%23ffffff' stroke-opacity='.22' stroke-width='1.4'/%3E%3Cline x1='16' y1='16' x2='23' y2='9' stroke='%235fd39a' stroke-width='1.9' stroke-linecap='round'/%3E%3Ccircle cx='22.6' cy='9.4' r='2.5' fill='%235fd39a'/%3E%3C/svg%3E">
 <!-- Open Graph / Twitter — crawlers don't run JS, so edit the domain/image here directly -->
 <meta property="og:type" content="website">
-<meta property="og:title" content="ProfitFlow — track the cash-out, not the buys">
+<meta property="og:title" content="ExitRadar — track the cash-out, not the buys">
 <meta property="og:description" content="A real-time terminal for realized profit on Solana. Ranked by dollars, the moment a sell clears.">
-<meta property="og:url" content="https://profitflow.io/">
-<meta property="og:image" content="https://profitflow.io/og.png">
+<meta property="og:url" content="https://exitradar.fun/">
+<meta property="og:image" content="https://exitradar.fun/og.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="ProfitFlow — track the cash-out, not the buys">
+<meta name="twitter:title" content="ExitRadar — track the cash-out, not the buys">
 <meta name="twitter:description" content="A real-time terminal for realized profit on Solana. Ranked by dollars, the moment a sell clears.">
-<meta name="twitter:image" content="https://profitflow.io/og.png">
+<meta name="twitter:image" content="https://exitradar.fun/og.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -54,6 +54,8 @@
   .nav-in{display:flex;align-items:center;justify-content:space-between;height:64px}
   .logo{font-weight:600;font-size:16px;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
   .dot{width:7px;height:7px;border-radius:50%;background:var(--green)}
+  .svg-sprite{position:absolute;width:0;height:0;overflow:hidden}
+  .logo-mark{width:1.2em;height:1.2em;flex:0 0 auto;color:var(--white)}
   .nlinks{display:flex;gap:32px}
   .nlinks a{color:var(--muted);font-size:14px;transition:color .2s}
   .nlinks a:hover{color:var(--white)}
@@ -288,9 +290,11 @@
 </head>
 <body>
 
+<svg class="svg-sprite" aria-hidden="true" focusable="false"><symbol id="logo-radar" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.2" fill="none" stroke="currentColor" stroke-opacity=".2" stroke-width="1.3"/><circle cx="12" cy="12" r="5.6" fill="none" stroke="currentColor" stroke-opacity=".16" stroke-width="1.2"/><line x1="12" y1="12" x2="19" y2="5" stroke="#5fd39a" stroke-width="1.7" stroke-linecap="round"/><circle cx="18.6" cy="5.4" r="2.4" fill="#5fd39a"><animate attributeName="opacity" values="1;.4;1" dur="2.6s" repeatCount="indefinite"/></circle></symbol></svg>
+
 <nav>
   <div class="wrap nav-in">
-    <div class="logo"><span class="dot"></span> ProfitFlow</div>
+    <div class="logo"><svg class="logo-mark" aria-hidden="true"><use href="#logo-radar"></use></svg> ExitRadar</div>
     <div class="nlinks">
       <a href="#angle">Why</a>
       <a href="#proof">Proof</a>
@@ -416,14 +420,14 @@
       </div>
       <div class="share-stage rv">
         <div class="scard" id="scard">
-          <div class="sc-top"><span class="sc-logo"><span class="dot"></span> ProfitFlow</span><span class="sc-badge">REALIZED</span></div>
+          <div class="sc-top"><span class="sc-logo"><svg class="logo-mark" aria-hidden="true"><use href="#logo-radar"></use></svg> ExitRadar</span><span class="sc-badge">REALIZED</span></div>
           <div class="sc-main">
             <div class="sc-tkr" id="sc-tkr">$GIGA</div>
             <div class="sc-pnl" id="sc-pnl">+$628,200</div>
             <div class="sc-mult" id="sc-mult">49.3× return</div>
             <div class="sc-flow"><span id="sc-in">in $13.0K</span><span class="sc-arr">→</span><span id="sc-out">out $641.2K</span></div>
           </div>
-          <div class="sc-foot"><span id="sc-wal">Kd4m…8sQe</span><span id="sc-domain">profitflow.io</span></div>
+          <div class="sc-foot"><span id="sc-wal">Kd4m…8sQe</span><span id="sc-domain">exitradar.fun</span></div>
         </div>
       </div>
     </div>
@@ -446,7 +450,7 @@
 <footer>
   <div class="wrap">
     <div class="foot">
-      <div class="logo"><span class="dot"></span> ProfitFlow</div>
+      <div class="logo"><svg class="logo-mark" aria-hidden="true"><use href="#logo-radar"></use></svg> ExitRadar</div>
       <div class="fl"><button type="button" class="linklike" data-waitlist>Join waitlist</button><a href="#" data-link="x">X</a><a href="#" data-link="telegram">Telegram</a></div>
       <div class="cc">© 2026</div>
     </div>
@@ -538,8 +542,15 @@ async function drawCard(){
   x.fillStyle='#0c0d0f';rr(x,60,60,960,960,44);x.fill();
   x.strokeStyle='rgba(255,255,255,.12)';x.lineWidth=2;rr(x,60,60,960,960,44);x.stroke();
   x.textBaseline='middle';x.textAlign='left';
-  x.fillStyle='#5fd39a';x.beginPath();x.arc(132,158,9,0,7);x.fill();
-  x.fillStyle='#fafafa';x.font='600 36px "Hanken Grotesk"';x.fillText('ProfitFlow',156,160);
+  // radar logomark
+  x.save();x.translate(132,158);x.lineCap='round';
+  x.strokeStyle='rgba(255,255,255,.28)';x.lineWidth=2;
+  x.beginPath();x.arc(0,0,15,0,7);x.stroke();
+  x.beginPath();x.arc(0,0,7.5,0,7);x.stroke();
+  x.strokeStyle='#5fd39a';x.lineWidth=2.4;x.beginPath();x.moveTo(0,0);x.lineTo(10,-10);x.stroke();
+  x.fillStyle='#5fd39a';x.beginPath();x.arc(10.4,-10.4,4,0,7);x.fill();
+  x.restore();
+  x.fillStyle='#fafafa';x.font='600 36px "Hanken Grotesk"';x.fillText('ExitRadar',162,160);
   x.textAlign='right';x.fillStyle='#71717a';x.font='500 22px "IBM Plex Mono"';x.fillText('REALIZED',960,160);x.textAlign='left';
   x.fillStyle='#a1a1aa';x.font='500 44px "IBM Plex Mono"';x.fillText(cur.tkr,120,560);
   const txt='+'+full(cur.pnl);let fs=148;x.font=`600 ${fs}px "IBM Plex Mono"`;
@@ -555,18 +566,18 @@ async function drawCard(){
 $('download').onclick=async()=>{
   const btn=$('download');const t=btn.textContent;btn.textContent='Rendering…';
   try{const c=await drawCard();c.toBlob(b=>{const u=URL.createObjectURL(b);const l=document.createElement('a');
-    l.href=u;l.download='profitflow-'+cur.tkr.replace('$','')+'.png';l.click();URL.revokeObjectURL(u);btn.textContent=t})}
+    l.href=u;l.download='exitradar-'+cur.tkr.replace('$','')+'.png';l.click();URL.revokeObjectURL(u);btn.textContent=t})}
   catch(e){btn.textContent=t}
 };
 
 // ---------- config (EDIT THESE before going live) ----------
 const CONFIG={
   waitlistEndpoint:'https://formspree.io/f/REPLACE_ME', // buat gratis di formspree.io, tempel ID-nya
-  domain:'profitflow.io',   // tampil di share card + tautan share
+  domain:'exitradar.fun',   // tampil di share card + tautan share
   apiBase:'',               // base URL API PnL ('' = origin sama, lewat nginx /api)
-  x:'',                     // mis. 'https://x.com/namamu' (kosong = link disembunyikan)
-  telegram:'',              // mis. 'https://t.me/namamu'
-  analytics:{plausibleDomain:''} // mis. 'profitflow.io' → load Plausible (privacy-friendly). kosong = off
+  x:'https://x.com/exitradar_fun', // akun X ExitRadar
+  telegram:'',              // mis. 'https://t.me/namamu' (kosong = link disembunyikan)
+  analytics:{plausibleDomain:''} // mis. 'exitradar.fun' → load Plausible (privacy-friendly). kosong = off
 };
 (function applyConfig(){
   const d=$('sc-domain');if(d)d.textContent=CONFIG.domain;
@@ -594,7 +605,7 @@ wlForm.addEventListener('submit',async e=>{
   wlMsg.className='wl-msg';wlMsg.textContent='';
   const b=wlForm.querySelector('button'),bt=b.textContent;b.textContent='…';b.disabled=true;
   try{
-    if(CONFIG.waitlistEndpoint.includes('REPLACE_ME')){console.warn('[ProfitFlow] set CONFIG.waitlistEndpoint to capture emails');throw new Error('cfg');}
+    if(CONFIG.waitlistEndpoint.includes('REPLACE_ME')){console.warn('[ExitRadar] set CONFIG.waitlistEndpoint to capture emails');throw new Error('cfg');}
     const r=await fetch(CONFIG.waitlistEndpoint,{method:'POST',headers:{'Accept':'application/json'},body:new URLSearchParams({email})});
     if(!r.ok)throw new Error('http');
     wlForm.style.display='none';wlMsg.className='wl-msg ok';wlMsg.textContent="✓ You're on the list — we'll email you at launch.";
@@ -608,14 +619,14 @@ wlForm.addEventListener('submit',async e=>{
 
 // ---------- share to X ----------
 $('shareX').onclick=()=>{
-  const text=`${cur.tkr} realized +${full(cur.pnl)} (${cur.mult.toFixed(1)}×) — tracked on ProfitFlow`;
+  const text=`${cur.tkr} realized +${full(cur.pnl)} (${cur.mult.toFixed(1)}×) — tracked on ExitRadar`;
   const url='https://'+CONFIG.domain+'/';
   window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,'_blank','noopener');
 };
 
 // ---------- waitlist: share to spread ----------
 $('wl-x').onclick=()=>{
-  const t='I just joined the ProfitFlow waitlist — a real-time terminal for realized profit on Solana.';
+  const t='I just joined the ExitRadar waitlist — a real-time terminal for realized profit on Solana.';
   window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(t)}&url=${encodeURIComponent('https://'+CONFIG.domain+'/')}`,'_blank','noopener');
 };
 $('wl-copy').onclick=async()=>{
