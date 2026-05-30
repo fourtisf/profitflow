@@ -1,18 +1,16 @@
 // PM2 process definitions for ProfitFlow.
 //
-// IMPORTANT — read before running:
-// This file intentionally manages ONLY the app(s) contained in THIS repository.
-// The production services already running on the server —
-//     gateway, ingest, enrich, payments, bot, alerts, web
-// are NOT defined here and MUST NOT be deleted. Always start/reload with the
-// `--only` flag so PM2 never touches anything else:
+// Two apps:
+//   profitflow-landing — serves the static marketing page (deploy/static-server.js)
+//   profitflow-api     — wallet realized-PnL API (pnl-validation/server.js)
 //
-//     pm2 start ecosystem.config.js --only profitflow-landing
+// Start scoped with --only so PM2 never touches unrelated processes:
+//   pm2 start ecosystem.config.js --only profitflow-landing
+//   HELIUS_API_KEY=xxx pm2 start ecosystem.config.js --only profitflow-api --update-env
 //
-// `profitflow-landing` serves the static marketing page via a zero-dependency
-// Node server (deploy/static-server.js). That page uses SIMULATED data — it is
-// a demo, not the live product (see HANDOFF.md). Put it behind your existing
-// reverse proxy, or set HOST=127.0.0.1 to keep it internal.
+// The API needs HELIUS_API_KEY in its environment. NEVER hard-code the key here
+// (this file is committed) — pass it on the shell when starting, as shown above.
+// Both apps bind locally / sit behind nginx (see deploy/README.md).
 
 module.exports = {
   apps: [
@@ -29,6 +27,21 @@ module.exports = {
         HOST: '0.0.0.0',
         PORT: 8080,
         STATIC_DIR: 'landing-page',
+      },
+    },
+    {
+      name: 'profitflow-api',
+      script: 'pnl-validation/server.js',
+      cwd: __dirname,
+      exec_mode: 'fork',
+      instances: 1,
+      autorestart: true,
+      max_memory_restart: '150M',
+      time: true,
+      env: {
+        HOST: '127.0.0.1', // behind nginx; not exposed directly
+        PORT: 8090,
+        // HELIUS_API_KEY: provided on the shell at start time (see header) — do NOT commit it
       },
     },
   ],

@@ -256,6 +256,29 @@
   .wl-share .share-btns{display:flex;gap:10px}
   .wl-share .btn{font-family:var(--mono);font-size:12.5px;padding:9px 14px}
 
+  /* wallet PnL checker */
+  .ck-form{display:grid;grid-template-columns:1fr 1fr auto;gap:12px}
+  .ck-form input{background:var(--bg-2);border:1px solid var(--line-2);border-radius:9px;
+    padding:12px 14px;color:var(--white);font-family:var(--mono);font-size:13px;outline:none;min-width:0}
+  .ck-form input:focus{border-color:var(--green-dim)}
+  .ck-form .btn{padding:12px 22px}
+  .ck-hint{font-family:var(--mono);font-size:12px;color:var(--faint);margin-top:14px}
+  .ck-hint a{color:var(--muted);text-decoration:underline}
+  .ck-out{margin-top:24px;border:1px solid var(--line);border-radius:14px;background:var(--panel);overflow:hidden}
+  .ck-out[hidden]{display:none}
+  .ck-load,.ck-empty,.ck-err{padding:24px;font-family:var(--mono);font-size:13px;color:var(--muted)}
+  .ck-err{color:#e0795f}
+  .ck-summary{padding:26px 24px;border-bottom:1px solid var(--line)}
+  .ck-big{font-family:var(--mono);font-weight:600;font-size:clamp(30px,6vw,46px);letter-spacing:-.02em;line-height:1}
+  .ck-big.pos{color:var(--green)}
+  .ck-big.neg{color:#e0795f}
+  .ck-sub{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-top:10px;line-height:1.6}
+  .ck-ledger{max-height:280px;overflow:auto}
+  .ck-ledger .lg-row{grid-template-columns:96px 1fr auto;gap:14px}
+  .ck-warn{padding:16px 24px;border-top:1px solid var(--line);font-family:var(--mono);font-size:11.5px;color:var(--green-dim);line-height:1.7}
+  .ck-fifo{padding:14px 24px;border-top:1px solid var(--line);font-family:var(--mono);font-size:12px;color:var(--faint)}
+  @media(max-width:760px){.ck-form{grid-template-columns:1fr}}
+
   @media (prefers-reduced-motion: reduce){
     *{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
     html{scroll-behavior:auto}
@@ -271,6 +294,7 @@
     <div class="nlinks">
       <a href="#angle">Why</a>
       <a href="#proof">Proof</a>
+      <a href="#checker">Check</a>
       <a href="#features">Features</a>
       <a href="#share">Share</a>
       <a href="#faq">FAQ</a>
@@ -335,6 +359,25 @@
       </div>
     </div>
     <div class="sources rv">pump.fun · Raydium · Meteora &nbsp;—&nbsp; cost basis from full wallet history &nbsp;—&nbsp; wash trades, MEV &amp; LP moves filtered out</div>
+  </div>
+</section>
+
+<section id="checker">
+  <div class="wrap">
+    <div class="proof-head rv">
+      <div class="kicker">Try it live</div>
+      <h2>Check any wallet’s realized PnL.</h2>
+      <p>Paste a Solana wallet and a token mint. We pull the full on-chain history, reconstruct the cost basis, and show the realized profit — the same engine that powers the feed.</p>
+    </div>
+    <div class="checker narrow rv">
+      <form id="ck-form" class="ck-form" autocomplete="off">
+        <input id="ck-wallet" placeholder="Wallet address" spellcheck="false" aria-label="Wallet address">
+        <input id="ck-mint" placeholder="Token mint address" spellcheck="false" aria-label="Token mint address">
+        <button class="btn btn-w" type="submit">Check</button>
+      </form>
+      <div class="ck-hint">SOL is priced at a flat estimate for now, so figures are approximate. <a href="#faq">Why?</a></div>
+      <div class="ck-out" id="ck-out" hidden></div>
+    </div>
   </div>
 </section>
 
@@ -520,6 +563,7 @@ $('download').onclick=async()=>{
 const CONFIG={
   waitlistEndpoint:'https://formspree.io/f/REPLACE_ME', // buat gratis di formspree.io, tempel ID-nya
   domain:'profitflow.io',   // tampil di share card + tautan share
+  apiBase:'',               // base URL API PnL ('' = origin sama, lewat nginx /api)
   x:'',                     // mis. 'https://x.com/namamu' (kosong = link disembunyikan)
   telegram:'',              // mis. 'https://t.me/namamu'
   analytics:{plausibleDomain:''} // mis. 'profitflow.io' → load Plausible (privacy-friendly). kosong = off
@@ -578,6 +622,48 @@ $('wl-copy').onclick=async()=>{
   try{await navigator.clipboard.writeText('https://'+CONFIG.domain+'/');
     const b=$('wl-copy'),o=b.textContent;b.textContent='✓ Copied';setTimeout(()=>b.textContent=o,1500);}catch(e){}
 };
+
+// ---------- wallet PnL checker ----------
+(function(){
+  const form=$('ck-form'),out=$('ck-out');if(!form)return;
+  const B58=/^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+  const esc=s=>String(s).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+  const money=n=>(n<0?'−':'')+'$'+Math.abs(Math.round(n)).toLocaleString('en-US');
+  function render(d){
+    if(!d.summary)return '<div class="ck-empty">No activity for this token in this wallet.</div>';
+    const s=d.summary;
+    const rows=d.ledger.map(e=>{
+      const sell=e.kind==='sell';
+      const amt=e.usd!=null?(sell?'+':'−')+'$'+Math.round(e.usd).toLocaleString('en-US'):'—';
+      const dt=new Date(e.ts*1000).toISOString().slice(0,10);
+      return `<div class="lg-row"><span class="lg-tag ${sell?'sell':''}">${e.kind.replace('_',' ').toUpperCase()}</span><span class="lg-d">${dt}</span><span class="lg-amt ${sell?'out':''}">${amt}</span></div>`;
+    }).join('');
+    const warns=(d.warnings&&d.warnings.length)?`<div class="ck-warn">⚠ ${d.warnings.map(esc).join('<br>⚠ ')}</div>`:'';
+    return `<div class="ck-summary">
+        <div class="ck-big ${s.realizedPnL>=0?'pos':'neg'}">${money(s.realizedPnL)}</div>
+        <div class="ck-sub">realized · ${s.multipleOnSold!=null?s.multipleOnSold+'×':'—'} on sold · proceeds ${money(s.totalProceeds)} · still holding ${s.tokensRemaining.toLocaleString('en-US')} tokens · ${d.events} events</div>
+      </div>
+      <div class="ck-ledger">${rows}</div>${warns}
+      <div class="ck-fifo">FIFO cross-check: ${money(s.fifoRealized)}</div>`;
+  }
+  form.addEventListener('submit',async e=>{
+    e.preventDefault();
+    const wallet=$('ck-wallet').value.trim(),mint=$('ck-mint').value.trim();
+    out.hidden=false;
+    if(!B58.test(wallet)){out.innerHTML='<div class="ck-err">Enter a valid Solana wallet address.</div>';return;}
+    if(!B58.test(mint)){out.innerHTML='<div class="ck-err">Enter a valid token mint address.</div>';return;}
+    const btn=form.querySelector('button'),bt=btn.textContent;btn.textContent='Checking…';btn.disabled=true;
+    out.innerHTML='<div class="ck-load">Reconstructing on-chain history…</div>';
+    try{
+      const r=await fetch(`${CONFIG.apiBase}/api/pnl?wallet=${encodeURIComponent(wallet)}&mint=${encodeURIComponent(mint)}`);
+      const d=await r.json();
+      if(!r.ok)throw new Error(d.detail||d.error||('HTTP '+r.status));
+      out.innerHTML=render(d);
+    }catch(err){
+      out.innerHTML='<div class="ck-err">Couldn’t check — '+esc(err.message||err)+'</div>';
+    }finally{btn.textContent=bt;btn.disabled=false;}
+  });
+})();
 </script>
 </body>
 </html>
