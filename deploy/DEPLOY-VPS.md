@@ -6,10 +6,18 @@ to Vercel (see `DEPLOY-VERCEL.md` / the root README). Two paths below — **Dock
 
 > Run these on the VPS yourself. Steps marked ⚠️ **delete things** — read them before pasting.
 
-## 0. Check what's installed
+## 0. Prerequisites — Node 22 is required
+
+pnpm/corepack needs **Node ≥ 22**. If `node -v` shows v20 or lower you'll hit
+`ERR_UNKNOWN_BUILTIN_MODULE: node:sqlite` — install Node 22 LTS first (NodeSource, system-wide,
+plays nicely with pm2):
 
 ```bash
-node -v ; pnpm -v ; git --version ; docker -v ; docker compose version
+node -v                                   # if < v22, do the next two lines:
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+apt-get install -y nodejs
+npm install -g pm2                         # re-ensure pm2 on the new Node
+node -v ; git --version                    # node should now be v22.x
 ```
 
 ## 1. ⚠️ Remove the old app safely (don't blind-`rm`)
@@ -58,6 +66,9 @@ docker compose exec worker sh -c 'echo set DATABASE_URL and run: pnpm --filter @
 ```
 
 ## 3b. Or run with pm2 (no DB needed in sim mode)
+
+> Make sure you are **inside the cloned `profitflow/` folder** (where `ecosystem.config.cjs` is).
+> Running these from `~` is why you'd see "File ecosystem.config.cjs not found".
 
 ```bash
 corepack enable

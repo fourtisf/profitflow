@@ -4,7 +4,7 @@
 #   docker build --build-arg APP=bot    -t profitflow-bot    .
 # tsup bundles each app (incl. workspace packages) into dist/index.js; only external deps remain.
 
-FROM node:20-slim AS base
+FROM node:22-slim AS base
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 RUN corepack enable
@@ -18,7 +18,7 @@ RUN pnpm --filter @profitflow/${APP} build
 # Produce a self-contained dir (package.json + dist + production node_modules).
 RUN pnpm --filter @profitflow/${APP} --prod deploy --legacy /prod
 
-FROM node:20-slim AS run
+FROM node:22-slim AS run
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build /prod ./
