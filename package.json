@@ -1,0 +1,24 @@
+{
+  "name": "profitflow",
+  "private": true,
+  "version": "0.1.0",
+  "description": "ProfitFlow — a real-time terminal for realized profit on Solana.",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "validate": "pnpm --filter @profitflow/pnl-engine validate --",
+    "clean": "turbo run clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

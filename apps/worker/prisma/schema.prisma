@@ -1,0 +1,42 @@
+// Shared Postgres schema. The worker WRITES pf_events; the API READS them; the web waitlist uses
+// Waitlist. Apply with: DATABASE_URL=... pnpm --filter @profitflow/worker prisma:push
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// One emitted realized-profit event. Dedupe key = tx signature.
+model Event {
+  sig             String   @id
+  ts              BigInt // unix ms
+  ticker          String
+  mint            String
+  wallet          String
+  walletShort     String   @map("wallet_short")
+  entryUsd        Float    @map("entry_usd")
+  proceedsUsd     Float    @map("proceeds_usd")
+  pnlUsd          Float    @map("pnl_usd")
+  multiple        Float?
+  source          String
+  unverifiedBasis Boolean  @map("unverified_basis")
+  tier            String
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([wallet])
+  @@index([ts])
+  @@index([tier])
+  @@map("pf_events")
+}
+
+/// Landing-page waitlist signups.
+model Waitlist {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("pf_waitlist")
+}

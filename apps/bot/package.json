@@ -1,0 +1,24 @@
+{
+  "name": "@profitflow/bot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "ProfitFlow distribution bot: hourly, posts the biggest realized exit's share card to Telegram + X.",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist .turbo *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@profitflow/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsup": "^8.3.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

@@ -1,0 +1,85 @@
+# ProfitFlow backend stack (api + worker + bot + postgres + redis).
+#
+# Out of the box this runs in DEMO mode (DATA_SOURCE=sim): the worker pipes simulated exits into
+# Postgres + Redis, and the API serves them — so the whole loop is exercised with no keys.
+# To go LIVE: set DATA_SOURCE=helius and provide HELIUS_API_KEY + BIRDEYE_API_KEY (+ bot creds)
+# via a .env file next to this compose file.
+#
+#   docker compose up --build
+#
+# Frontend (apps/web) deploys separately to Vercel, pointing at this API.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-profitflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-profitflow}
+      POSTGRES_DB: ${POSTGRES_DB:-profitflow}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-profitflow}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      args:
+        APP: api
+    environment:
+      PORT: 4000
+      DATA_SOURCE: ${DATA_SOURCE:-sim}
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-profitflow}:${POSTGRES_PASSWORD:-profitflow}@postgres:5432/${POSTGRES_DB:-profitflow}
+      REDIS_URL: redis://redis:6379
+    ports:
+      - '4000:4000'
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      args:
+        APP: worker
+    environment:
+      DATA_SOURCE: ${DATA_SOURCE:-sim}
+      HELIUS_API_KEY: ${HELIUS_API_KEY:-}
+      BIRDEYE_API_KEY: ${BIRDEYE_API_KEY:-}
+      WATCH_ADDRESSES: ${WATCH_ADDRESSES:-}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-profitflow}:${POSTGRES_PASSWORD:-profitflow}@postgres:5432/${POSTGRES_DB:-profitflow}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+
+  bot:
+    build:
+      context: .
+      args:
+        APP: bot
+    environment:
+      API_URL: http://api:4000
+      SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://profitflow.io}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  pgdata:
