@@ -240,6 +240,22 @@
   .linklike{background:none;border:none;color:var(--muted);font-family:var(--sans);font-size:13px;cursor:pointer;padding:0}
   .linklike:hover{color:var(--white)}
 
+  /* custom share-card form */
+  .card-form{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:22px;max-width:400px}
+  .card-form label{display:flex;flex-direction:column;gap:6px;font-family:var(--mono);font-size:11px;
+    letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+  .card-form label.full{grid-column:1/-1}
+  .card-form input{background:var(--bg-2);border:1px solid var(--line-2);border-radius:8px;
+    padding:9px 11px;color:var(--white);font-family:var(--mono);font-size:13px;outline:none;width:100%}
+  .card-form input:focus{border-color:var(--green-dim)}
+
+  /* waitlist share step */
+  .wl-share[hidden]{display:none}
+  .wl-share{margin-top:18px;border-top:1px solid var(--line);padding-top:16px}
+  .wl-share p{color:var(--muted);font-size:13px;font-weight:300;margin-bottom:12px}
+  .wl-share .share-btns{display:flex;gap:10px}
+  .wl-share .btn{font-family:var(--mono);font-size:12.5px;padding:9px 14px}
+
   @media (prefers-reduced-motion: reduce){
     *{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
     html{scroll-behavior:auto}
@@ -278,7 +294,7 @@
   <div class="panel rv">
     <div class="p-bar">
       <div class="l"><span class="ldot"></span> sample feed <span class="sim">simulated</span></div>
-      <div class="r">today &nbsp;<b id="t-total">$0</b></div>
+      <div class="r">today &nbsp;<b id="t-total">$0</b> &nbsp;·&nbsp; biggest <b id="t-big">$0</b></div>
     </div>
     <div class="feed" id="feed"></div>
   </div>
@@ -343,7 +359,12 @@
       <div class="share-copy rv">
         <div class="kicker">Built to spread</div>
         <h2>One screenshot does the marketing.</h2>
-        <p>Every big exit becomes a clean, branded card. Your users post it, their followers ask what it is — and the feed grows itself.</p>
+        <p>Every big exit becomes a clean, branded card. Type any exit below — it renders live, then download or share it.</p>
+        <div class="card-form">
+          <label class="full">Token <input id="cf-tkr" value="$GIGA" maxlength="14" spellcheck="false"></label>
+          <label>In ($) <input id="cf-in" type="number" min="0" value="13000"></label>
+          <label>Out ($) <input id="cf-out" type="number" min="0" value="641200"></label>
+        </div>
         <div class="share-btns">
           <button class="btn btn-o" id="shuffle">↻ Shuffle</button>
           <button class="btn btn-o" id="shareX">↗ Share to X</button>
@@ -402,6 +423,13 @@
       <button class="btn btn-w" type="submit">Join</button>
     </form>
     <div class="wl-msg" id="wl-msg" role="status"></div>
+    <div class="wl-share" id="wl-share" hidden>
+      <p>Know someone who’d want this? Spread the word.</p>
+      <div class="share-btns">
+        <button class="btn btn-o" type="button" id="wl-x">↗ Share on X</button>
+        <button class="btn btn-o" type="button" id="wl-copy">⧉ Copy link</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -411,8 +439,8 @@ const hex='0123456789abcdefGHJKLMNPQRSTUVWXYZ';
 function wallet(){let a='',b='';for(let i=0;i<4;i++)a+=hex[Math.random()*hex.length|0];for(let i=0;i<4;i++)b+=hex[Math.random()*hex.length|0];return a+'…'+b}
 function fmt(n){return n>=1e6?'$'+(n/1e6).toFixed(2)+'M':n>=1e3?'$'+(n/1e3).toFixed(1)+'K':'$'+Math.round(n)}
 function full(n){return '$'+Math.round(n).toLocaleString('en-US')}
-const feed=document.getElementById('feed'),tT=document.getElementById('t-total');
-let total=0;
+const feed=document.getElementById('feed'),tT=document.getElementById('t-total'),tBig=document.getElementById('t-big');
+let total=0,biggest=0;
 function ev(){const big=Math.random()<0.16;const pnl=big?80000+Math.random()*700000:1000+Math.random()*48000;const mult=big?(12+Math.random()*180):(1.4+Math.random()*18);const entry=pnl/(mult-1);return{pnl,mult,entry,tkr:tokens[Math.random()*tokens.length|0],w:wallet()}}
 function render(e){
   const r=document.createElement('div');r.className='row';
@@ -422,6 +450,7 @@ function render(e){
   feed.prepend(r);while(feed.children.length>7)feed.removeChild(feed.lastChild);
   [...feed.children].forEach((c,i)=>{const a=c.querySelector('.ago');if(i>0&&a&&a.textContent==='just now')a.textContent=(i*3+(Math.random()*3|0))+'s ago'});
   total+=e.pnl;anim(total);
+  if(e.pnl>biggest){biggest=e.pnl;tBig.textContent=fmt(biggest);}
 }
 function anim(t){const s=parseFloat(tT.dataset.v||0);tT.dataset.v=t;const t0=performance.now();
   (function st(n){const p=Math.min((n-t0)/600,1);tT.textContent=fmt(s+(t-s)*(1-Math.pow(1-p,3)));if(p<1)requestAnimationFrame(st)})(t0)}
@@ -449,7 +478,14 @@ function setCard(e){cur=e;
   $('sc-in').textContent='in '+fmt(e.inN);$('sc-out').textContent='out '+fmt(e.outN);
   $('sc-wal').textContent=e.wal;
 }
-$('shuffle').onclick=()=>setCard(examples[Math.random()*examples.length|0]);
+$('shuffle').onclick=()=>{const e=examples[Math.random()*examples.length|0];
+  $('cf-tkr').value=e.tkr;$('cf-in').value=e.inN;$('cf-out').value=e.outN;setCard(e);};
+function cardFromInputs(){
+  let tkr=$('cf-tkr').value.trim()||'$TOKEN';if(!tkr.startsWith('$'))tkr='$'+tkr;
+  const inN=Math.max(0,parseFloat($('cf-in').value)||0),outN=Math.max(0,parseFloat($('cf-out').value)||0);
+  setCard({tkr,pnl:outN-inN,mult:inN>0?outN/inN:0,inN,outN,wal:cur.wal});
+}
+['cf-tkr','cf-in','cf-out'].forEach(id=>$(id).addEventListener('input',cardFromInputs));
 
 function rr(x,a,b,w,h,r){x.beginPath();x.moveTo(a+r,b);x.arcTo(a+w,b,a+w,b+h,r);x.arcTo(a+w,b+h,a,b+h,r);x.arcTo(a,b+h,a,b,r);x.arcTo(a,b,a+w,b,r);x.closePath()}
 async function drawCard(){
@@ -485,12 +521,18 @@ const CONFIG={
   waitlistEndpoint:'https://formspree.io/f/REPLACE_ME', // buat gratis di formspree.io, tempel ID-nya
   domain:'profitflow.io',   // tampil di share card + tautan share
   x:'',                     // mis. 'https://x.com/namamu' (kosong = link disembunyikan)
-  telegram:''               // mis. 'https://t.me/namamu'
+  telegram:'',              // mis. 'https://t.me/namamu'
+  analytics:{plausibleDomain:''} // mis. 'profitflow.io' → load Plausible (privacy-friendly). kosong = off
 };
 (function applyConfig(){
   const d=$('sc-domain');if(d)d.textContent=CONFIG.domain;
   document.querySelectorAll('[data-link]').forEach(a=>{const u=CONFIG[a.dataset.link];
     if(u){a.href=u;a.target='_blank';a.rel='noopener';}else{a.style.display='none';}});
+  if(CONFIG.analytics&&CONFIG.analytics.plausibleDomain){
+    const s=document.createElement('script');s.defer=true;
+    s.setAttribute('data-domain',CONFIG.analytics.plausibleDomain);
+    s.src='https://plausible.io/js/script.js';document.head.appendChild(s);
+  }
 })();
 
 // ---------- waitlist modal ----------
@@ -512,6 +554,7 @@ wlForm.addEventListener('submit',async e=>{
     const r=await fetch(CONFIG.waitlistEndpoint,{method:'POST',headers:{'Accept':'application/json'},body:new URLSearchParams({email})});
     if(!r.ok)throw new Error('http');
     wlForm.style.display='none';wlMsg.className='wl-msg ok';wlMsg.textContent="✓ You're on the list — we'll email you at launch.";
+    $('wl-share').hidden=false;
   }catch(err){
     wlMsg.className='wl-msg err';
     wlMsg.textContent=err.message==='cfg'?'Waitlist opens soon — check back.':"Couldn't submit — try again.";
@@ -524,6 +567,16 @@ $('shareX').onclick=()=>{
   const text=`${cur.tkr} realized +${full(cur.pnl)} (${cur.mult.toFixed(1)}×) — tracked on ProfitFlow`;
   const url='https://'+CONFIG.domain+'/';
   window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,'_blank','noopener');
+};
+
+// ---------- waitlist: share to spread ----------
+$('wl-x').onclick=()=>{
+  const t='I just joined the ProfitFlow waitlist — a real-time terminal for realized profit on Solana.';
+  window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(t)}&url=${encodeURIComponent('https://'+CONFIG.domain+'/')}`,'_blank','noopener');
+};
+$('wl-copy').onclick=async()=>{
+  try{await navigator.clipboard.writeText('https://'+CONFIG.domain+'/');
+    const b=$('wl-copy'),o=b.textContent;b.textContent='✓ Copied';setTimeout(()=>b.textContent=o,1500);}catch(e){}
 };
 </script>
 </body>
