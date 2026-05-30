@@ -3,7 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ProfitFlow</title>
+<title>ProfitFlow — track the cash-out, not the buys</title>
+<meta name="description" content="A real-time terminal for realized profit on Solana. Watch wallets take money off the table — ranked by dollars — the moment a sell clears.">
+<meta name="theme-color" content="#08090a">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2308090a'/%3E%3Ccircle cx='16' cy='16' r='8' fill='%235fd39a'/%3E%3C/svg%3E">
+<!-- Open Graph / Twitter — crawlers don't run JS, so edit the domain/image here directly -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="ProfitFlow — track the cash-out, not the buys">
+<meta property="og:description" content="A real-time terminal for realized profit on Solana. Ranked by dollars, the moment a sell clears.">
+<meta property="og:url" content="https://profitflow.io/">
+<meta property="og:image" content="https://profitflow.io/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="ProfitFlow — track the cash-out, not the buys">
+<meta name="twitter:description" content="A real-time terminal for realized profit on Solana. Ranked by dollars, the moment a sell clears.">
+<meta name="twitter:image" content="https://profitflow.io/og.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -111,22 +124,7 @@
   .f h3{font-weight:600;font-size:19px;letter-spacing:-.02em;margin-bottom:9px}
   .f p{color:var(--muted);font-size:15px;font-weight:300;line-height:1.6}
 
-  /* PRICING */
-  .pr-head{text-align:center;margin-bottom:60px}
-  .pr-head h2{max-width:460px;margin:0 auto}
-  .plans{display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:760px;margin:0 auto}
-  .plan{border:1px solid var(--line);border-radius:14px;padding:34px}
-  .plan.pro{border-color:var(--line-2)}
-  .pn{font-family:var(--mono);font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:18px}
-  .pp{font-weight:600;font-size:42px;letter-spacing:-.03em;line-height:1}
-  .pp small{font-size:15px;font-weight:300;color:var(--faint);letter-spacing:0}
-  .plan ul{list-style:none;margin:28px 0 30px}
-  .plan li{display:flex;gap:11px;align-items:center;padding:10px 0;font-size:14.5px;color:var(--gray);font-weight:300;border-bottom:1px solid var(--line)}
-  .plan li:last-child{border-bottom:none}
-  .plan li .ch{color:var(--green);font-family:var(--mono);font-size:13px}
-  .plan li.off{color:var(--faint)}
-  .plan li.off .ch{color:var(--faint)}
-  .plan .btn{width:100%;justify-content:center;padding:12px}
+  /* (pricing styles removed — monetization still TBD per HANDOFF) */
 
   /* FOOTER */
   footer{border-top:1px solid var(--line);padding:40px 0 56px}
@@ -203,6 +201,50 @@
     .lg-row .lg-tx{display:none}
     .lg-foot{flex-direction:column;gap:10px;align-items:flex-start}
   }
+
+  /* === added features === */
+  .sim{font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);
+    border:1px solid var(--line-2);border-radius:5px;padding:2px 6px;margin-left:6px}
+
+  /* FAQ */
+  .faq-head{text-align:center;margin-bottom:48px}
+  .faq details{border-bottom:1px solid var(--line)}
+  .faq summary{cursor:pointer;list-style:none;padding:22px 0;font-size:17px;font-weight:500;
+    display:flex;justify-content:space-between;align-items:center;gap:16px}
+  .faq summary::-webkit-details-marker{display:none}
+  .faq summary::after{content:"+";font-family:var(--mono);color:var(--muted);font-size:22px;transition:.2s}
+  .faq details[open] summary::after{transform:rotate(45deg);color:var(--green)}
+  .faq details p{color:var(--muted);font-size:15px;font-weight:300;line-height:1.65;padding:0 0 24px}
+
+  /* MODAL (waitlist) */
+  .modal{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:24px}
+  .modal[hidden]{display:none}
+  .modal-bg{position:absolute;inset:0;background:rgba(0,0,0,.66);backdrop-filter:blur(4px);animation:fade .2s}
+  .modal-card{position:relative;z-index:1;width:100%;max-width:420px;background:var(--panel);
+    border:1px solid var(--line-2);border-radius:16px;padding:30px;
+    box-shadow:0 40px 90px -30px rgba(0,0,0,.9);animation:up .25s ease}
+  .modal-x{position:absolute;top:12px;right:14px;background:none;border:none;color:var(--muted);
+    font-size:26px;cursor:pointer;line-height:1;padding:4px}
+  .modal-x:hover{color:var(--white)}
+  .modal-card h3{font-weight:600;font-size:24px;letter-spacing:-.025em;margin:8px 0 10px}
+  .modal-card>p{color:var(--muted);font-size:14.5px;font-weight:300;line-height:1.6;margin-bottom:22px}
+  #wl-form{display:flex;gap:10px}
+  #wl-email{flex:1;min-width:0;background:var(--bg-2);border:1px solid var(--line-2);border-radius:9px;
+    padding:11px 14px;color:var(--white);font-family:var(--sans);font-size:14px;outline:none}
+  #wl-email:focus{border-color:var(--green-dim)}
+  #wl-form .btn{padding:11px 20px}
+  .wl-msg{font-family:var(--mono);font-size:12.5px;margin-top:14px;min-height:16px}
+  .wl-msg.ok{color:var(--green)}
+  .wl-msg.err{color:#e0795f}
+
+  .linklike{background:none;border:none;color:var(--muted);font-family:var(--sans);font-size:13px;cursor:pointer;padding:0}
+  .linklike:hover{color:var(--white)}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
+    html{scroll-behavior:auto}
+    .ldot{animation:none}
+  }
 </style>
 </head>
 <body>
@@ -215,8 +257,9 @@
       <a href="#proof">Proof</a>
       <a href="#features">Features</a>
       <a href="#share">Share</a>
+      <a href="#faq">FAQ</a>
     </div>
-    <a href="#" class="btn btn-w">Launch App</a>
+    <button type="button" class="btn btn-w" data-waitlist>Join waitlist</button>
   </div>
 </nav>
 
@@ -226,15 +269,15 @@
     <h1>Everyone tracks the buys.<span class="sub2">We track the cash-out.</span></h1>
     <p class="lead">A real-time terminal for realized profit. Watch wallets take money off the table the moment it lands on-chain — ranked by dollars.</p>
     <div class="cta">
-      <a href="#" class="btn btn-w">Open the feed</a>
+      <button type="button" class="btn btn-w" data-waitlist>Join the waitlist</button>
       <a href="#angle" class="btn btn-o">Why realized →</a>
     </div>
-    <div class="note">No signup · No wallet connect · Free to watch</div>
+    <div class="note">Get the launch invite · no spam, one email</div>
   </div>
 
   <div class="panel rv">
     <div class="p-bar">
-      <div class="l"><span class="ldot"></span> live feed</div>
+      <div class="l"><span class="ldot"></span> sample feed <span class="sim">simulated</span></div>
       <div class="r">today &nbsp;<b id="t-total">$0</b></div>
     </div>
     <div class="feed" id="feed"></div>
@@ -303,6 +346,7 @@
         <p>Every big exit becomes a clean, branded card. Your users post it, their followers ask what it is — and the feed grows itself.</p>
         <div class="share-btns">
           <button class="btn btn-o" id="shuffle">↻ Shuffle</button>
+          <button class="btn btn-o" id="shareX">↗ Share to X</button>
           <button class="btn btn-w" id="download">↓ Download PNG</button>
         </div>
       </div>
@@ -315,9 +359,22 @@
             <div class="sc-mult" id="sc-mult">49.3× return</div>
             <div class="sc-flow"><span id="sc-in">in $13.0K</span><span class="sc-arr">→</span><span id="sc-out">out $641.2K</span></div>
           </div>
-          <div class="sc-foot"><span id="sc-wal">Kd4m…8sQe</span><span>profitflow.io</span></div>
+          <div class="sc-foot"><span id="sc-wal">Kd4m…8sQe</span><span id="sc-domain">profitflow.io</span></div>
         </div>
       </div>
+    </div>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap">
+    <div class="faq-head rv"><div class="kicker">FAQ</div><h2>Questions, answered.</h2></div>
+    <div class="faq narrow rv">
+      <details><summary>How is “realized profit” calculated?</summary><p>We rebuild each wallet’s full on-chain history, derive its true average cost basis across every buy, and realize profit only when a sell clears. It’s the real cashed-out number — not a guess from a single transaction.</p></details>
+      <details><summary>How accurate is it?</summary><p>Figures are estimates from public on-chain data. Token transfers, airdrops and cross-wallet moves can distort cost basis, so we flag them instead of inventing a number. It’s an analytics tool, not financial advice.</p></details>
+      <details><summary>Which chain and sources?</summary><p>Solana. Swaps are parsed across pump.fun, Raydium and Meteora, with wash trades, MEV and liquidity moves filtered out so the realized figure reflects a genuine exit.</p></details>
+      <details><summary>Do I need to sign up or connect a wallet?</summary><p>No. The feed is read-only public data — no signup, no wallet connect to watch. Join the waitlist if you want the launch invite.</p></details>
+      <details><summary>Is it free?</summary><p>The public feed is free to watch. Deeper tools (wallet radar, sub-second alerts) are planned for a Pro tier — pricing isn’t finalized yet.</p></details>
     </div>
   </div>
 </section>
@@ -326,12 +383,27 @@
   <div class="wrap">
     <div class="foot">
       <div class="logo"><span class="dot"></span> ProfitFlow</div>
-      <div class="fl"><a href="#">X</a><a href="#">Telegram</a><a href="#">Docs</a><a href="#">API</a></div>
+      <div class="fl"><button type="button" class="linklike" data-waitlist>Join waitlist</button><a href="#" data-link="x">X</a><a href="#" data-link="telegram">Telegram</a></div>
       <div class="cc">© 2026</div>
     </div>
     <p class="disc">Profit figures are estimates from public on-chain data and reconstructed cost basis. Transfers, airdrops and cross-wallet activity may affect accuracy. Analytics tool, not financial advice. Figures shown here are illustrative.</p>
   </div>
 </footer>
+
+<div class="modal" id="waitlist" hidden>
+  <div class="modal-bg" data-close></div>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="wl-title">
+    <button class="modal-x" type="button" data-close aria-label="Close">×</button>
+    <div class="kicker">Waitlist</div>
+    <h3 id="wl-title">Get the launch invite.</h3>
+    <p>Drop your email — we’ll send one message when the live feed goes public. No spam.</p>
+    <form id="wl-form" novalidate>
+      <input id="wl-email" type="email" required placeholder="you@email.com" autocomplete="email" aria-label="Email">
+      <button class="btn btn-w" type="submit">Join</button>
+    </form>
+    <div class="wl-msg" id="wl-msg" role="status"></div>
+  </div>
+</div>
 
 <script>
 const tokens=['$WIF','$POPCAT','$MOODENG','$GIGA','$PNUT','$BONK','$MEW','$FWOG','$GOAT','$ZEREBRO','$AI16Z','$CHILLGUY','$PONKE'];
@@ -355,7 +427,9 @@ function anim(t){const s=parseFloat(tT.dataset.v||0);tT.dataset.v=t;const t0=per
   (function st(n){const p=Math.min((n-t0)/600,1);tT.textContent=fmt(s+(t-s)*(1-Math.pow(1-p,3)));if(p<1)requestAnimationFrame(st)})(t0)}
 for(let i=0;i<6;i++)render(ev());
 [...feed.children].forEach((c,i)=>{const a=c.querySelector('.ago');if(a)a.textContent=(i*4+2)+'s ago'});
-(function loop(){render(ev());setTimeout(loop,1600+Math.random()*2400)})();
+if(!matchMedia('(prefers-reduced-motion: reduce)').matches){
+  (function loop(){render(ev());setTimeout(loop,1600+Math.random()*2400)})();
+}
 const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.1});
 document.querySelectorAll('.rv').forEach(el=>io.observe(el));
 
@@ -396,7 +470,7 @@ async function drawCard(){
   x.fillStyle='#71717a';x.font='400 32px "IBM Plex Mono"';x.fillText('in '+fmt(cur.inN)+'   →   out '+fmt(cur.outN),120,838);
   x.strokeStyle='rgba(255,255,255,.10)';x.lineWidth=1.5;x.beginPath();x.moveTo(120,910);x.lineTo(960,910);x.stroke();
   x.fillStyle='#71717a';x.font='400 30px "IBM Plex Mono"';x.fillText(cur.wal,120,968);
-  x.textAlign='right';x.fillStyle='#4b4d52';x.fillText('profitflow.io',960,968);
+  x.textAlign='right';x.fillStyle='#4b4d52';x.fillText(CONFIG.domain,960,968);
   return c;
 }
 $('download').onclick=async()=>{
@@ -404,6 +478,52 @@ $('download').onclick=async()=>{
   try{const c=await drawCard();c.toBlob(b=>{const u=URL.createObjectURL(b);const l=document.createElement('a');
     l.href=u;l.download='profitflow-'+cur.tkr.replace('$','')+'.png';l.click();URL.revokeObjectURL(u);btn.textContent=t})}
   catch(e){btn.textContent=t}
+};
+
+// ---------- config (EDIT THESE before going live) ----------
+const CONFIG={
+  waitlistEndpoint:'https://formspree.io/f/REPLACE_ME', // buat gratis di formspree.io, tempel ID-nya
+  domain:'profitflow.io',   // tampil di share card + tautan share
+  x:'',                     // mis. 'https://x.com/namamu' (kosong = link disembunyikan)
+  telegram:''               // mis. 'https://t.me/namamu'
+};
+(function applyConfig(){
+  const d=$('sc-domain');if(d)d.textContent=CONFIG.domain;
+  document.querySelectorAll('[data-link]').forEach(a=>{const u=CONFIG[a.dataset.link];
+    if(u){a.href=u;a.target='_blank';a.rel='noopener';}else{a.style.display='none';}});
+})();
+
+// ---------- waitlist modal ----------
+const wlModal=$('waitlist'),wlForm=$('wl-form'),wlEmail=$('wl-email'),wlMsg=$('wl-msg');
+let wlLast=null;
+function wlOpen(){wlLast=document.activeElement;wlModal.hidden=false;document.body.style.overflow='hidden';setTimeout(()=>wlEmail.focus(),30);}
+function wlClose(){wlModal.hidden=true;document.body.style.overflow='';if(wlLast)wlLast.focus();}
+document.querySelectorAll('[data-waitlist]').forEach(b=>b.addEventListener('click',wlOpen));
+wlModal.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',wlClose));
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!wlModal.hidden)wlClose();});
+wlForm.addEventListener('submit',async e=>{
+  e.preventDefault();
+  const email=wlEmail.value.trim();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){wlMsg.className='wl-msg err';wlMsg.textContent='Enter a valid email.';return;}
+  wlMsg.className='wl-msg';wlMsg.textContent='';
+  const b=wlForm.querySelector('button'),bt=b.textContent;b.textContent='…';b.disabled=true;
+  try{
+    if(CONFIG.waitlistEndpoint.includes('REPLACE_ME')){console.warn('[ProfitFlow] set CONFIG.waitlistEndpoint to capture emails');throw new Error('cfg');}
+    const r=await fetch(CONFIG.waitlistEndpoint,{method:'POST',headers:{'Accept':'application/json'},body:new URLSearchParams({email})});
+    if(!r.ok)throw new Error('http');
+    wlForm.style.display='none';wlMsg.className='wl-msg ok';wlMsg.textContent="✓ You're on the list — we'll email you at launch.";
+  }catch(err){
+    wlMsg.className='wl-msg err';
+    wlMsg.textContent=err.message==='cfg'?'Waitlist opens soon — check back.':"Couldn't submit — try again.";
+    b.textContent=bt;b.disabled=false;
+  }
+});
+
+// ---------- share to X ----------
+$('shareX').onclick=()=>{
+  const text=`${cur.tkr} realized +${full(cur.pnl)} (${cur.mult.toFixed(1)}×) — tracked on ProfitFlow`;
+  const url='https://'+CONFIG.domain+'/';
+  window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,'_blank','noopener');
 };
 </script>
 </body>
