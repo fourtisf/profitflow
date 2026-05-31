@@ -1,5 +1,6 @@
 import { round } from '@profitflow/pnl-engine';
 import type { Tier } from './config';
+import { detectClusterExits, type ClusterOptions, type ClusterSignal } from './signals';
 import type {
   LeaderboardEntry,
   LeaderboardRange,
@@ -24,6 +25,7 @@ export interface DataSource {
   getLeaderboard(range: LeaderboardRange, limit?: number): LeaderboardEntry[];
   getWallet(wallet: string): WalletProfile | null;
   getToken(mint: string): TokenProfile | null;
+  getSignals(opts?: ClusterOptions): ClusterSignal[];
 }
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -146,5 +148,9 @@ export abstract class BaseDataSource implements DataSource {
       lastSeen: Math.max(...tss),
       exits,
     };
+  }
+
+  getSignals(opts?: ClusterOptions): ClusterSignal[] {
+    return detectClusterExits(this.buffer, opts);
   }
 }

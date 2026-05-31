@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { fullUsd } from '@profitflow/shared';
+import { detectClusterExits, fullUsd } from '@profitflow/shared';
 import { Nav } from '../../../components/Nav';
 import { Footer } from '../../../components/Footer';
 import { ExitRows } from '../../../components/ExitRows';
 import { getToken, IS_DEMO } from '../../../lib/data';
+
+const SIGNAL_WINDOW_MS = 48 * 60 * 60 * 1000;
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +22,9 @@ export async function generateMetadata({ params }: { params: { mint: string } })
 
 export default async function TokenPage({ params }: { params: { mint: string } }) {
   const token = await getToken(params.mint);
+  const cluster = token
+    ? detectClusterExits(token.exits, { windowMs: SIGNAL_WINDOW_MS, minWallets: 3 })[0]
+    : undefined;
 
   return (
     <>
@@ -48,6 +53,14 @@ export default async function TokenPage({ params }: { params: { mint: string } }
               </div>
               {IS_DEMO && <span className="demo-note">demo data</span>}
             </div>
+
+            {cluster && (
+              <div className="signal">
+                <span className="signal-dot" /> Distribution detected —{' '}
+                <b>{cluster.wallets} wallets</b> cashed out {token.ticker} in the last 48h, pulling{' '}
+                <b>+{fullUsd(cluster.realizedUsd)}</b> off the table.
+              </div>
+            )}
 
             <div className="statrow">
               <div className="stat">

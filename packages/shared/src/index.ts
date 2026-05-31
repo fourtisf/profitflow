@@ -14,6 +14,9 @@ export type {
   WsClientMessage,
 } from './types';
 
+export { detectClusterExits } from './signals';
+export type { ClusterSignal, ClusterOptions } from './signals';
+
 export { BaseDataSource } from './datasource';
 export type { DataSource, ExitListener } from './datasource';
 

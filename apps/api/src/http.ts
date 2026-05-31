@@ -77,6 +77,12 @@ export function createApp(ds: DataSource): Express {
     res.json(profile);
   });
 
+  // Smart-money signal: tokens being distributed — many wallets cashing out in a short window.
+  app.get('/api/signals', (req: Request, res: Response) => {
+    const minWallets = clampInt(req.query.minWallets, 3, 2, 20);
+    res.json({ signals: ds.getSignals({ minWallets }) });
+  });
+
   // Waitlist capture (email -> store). In-memory now; Postgres-backed when DATABASE_URL is set.
   app.post('/api/waitlist', async (req: Request, res: Response) => {
     const email = String(req.body?.email ?? '');

@@ -161,6 +161,7 @@ export async function getToken(mint: string): Promise<TokenProfile | null> {
   const now = Date.now();
   const ticker = pick(rand, TOKENS);
   const n = 6 + Math.floor(rand() * 14); // 6..19 exits across varied wallets
-  for (let i = 0; i < n; i++) src.add(genExit(rand, { ts: now - Math.floor(rand() * 30 * DAY), mint, ticker }));
+  // Cluster recent exits into a few days so the "distribution" signal is demonstrable.
+  for (let i = 0; i < n; i++) src.add(genExit(rand, { ts: now - Math.floor(rand() * 4 * DAY), mint, ticker }));
   return src.getToken(mint);
 }

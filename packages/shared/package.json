@@ -16,7 +16,7 @@
   "scripts": {
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
-    "test": "tsx test/sim.test.ts",
+    "test": "tsx test/sim.test.ts && tsx test/signals.test.ts",
     "clean": "rm -rf dist .turbo *.tsbuildinfo"
   },
   "dependencies": {
