@@ -91,13 +91,20 @@ export class HeliusIngest {
       console.log('[ingest] polling idle: no WATCH_ADDRESSES set (use Helius webhooks at scale).');
       return;
     }
+    const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+    console.log(
+      `[ingest] polling ${env.watchAddresses.length} wallets, ${env.pollSpacingMs}ms apart, every ${Math.round(env.pollIntervalMs / 1000)}s`,
+    );
     const tick = async (): Promise<void> => {
       for (const addr of env.watchAddresses) {
         try {
           const txs = await this.fetchRecent(addr);
           for (const tx of txs.sort((a, b) => a.timestamp - b.timestamp)) await this.processTx(tx, addr);
+          await sleep(env.pollSpacingMs); // throttle so we stay under Helius rate limits
         } catch (e) {
-          console.error('[ingest] poll failed for', addr, '-', e instanceof Error ? e.message : String(e));
+          const msg = e instanceof Error ? e.message : String(e);
+          console.error('[ingest] poll failed for', addr, '-', msg);
+          await sleep(msg.includes('429') ? 5_000 : env.pollSpacingMs); // back off hard on rate limit
         }
       }
       this.pollTimer = setTimeout(() => void tick(), env.pollIntervalMs);

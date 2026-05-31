@@ -10,6 +10,8 @@ export const env = {
   redisChannel: process.env.REDIS_EXITS_CHANNEL ?? 'profitflow:exits',
   webhookPort: Number(process.env.WORKER_WEBHOOK_PORT ?? 4100),
   pollIntervalMs: Number(process.env.POLL_INTERVAL_MS ?? 15_000),
+  /** Delay between per-wallet polls so we stay under Helius rate limits (free tier ~10 req/s). */
+  pollSpacingMs: Number(process.env.POLL_SPACING_MS ?? 350),
   watchAddresses: (process.env.WATCH_ADDRESSES ?? '')
     .split(',')
     .map((s) => s.trim())
