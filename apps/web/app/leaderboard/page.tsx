@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { fmtUsd, fullUsd, type LeaderboardRange } from '@profitflow/shared';
 import { Nav } from '../../components/Nav';
 import { Footer } from '../../components/Footer';
+import { SearchBox } from '../../components/SearchBox';
 import { getLeaderboard, IS_DEMO } from '../../lib/data';
 
 export const dynamic = 'force-dynamic';
@@ -33,6 +34,7 @@ export default async function LeaderboardPage({
               Realized profit <span className="accent">leaderboard</span>
             </h1>
             <p className="page-sub">Ranked by dollars actually cashed out — not paper gains.</p>
+            <SearchBox />
           </div>
           <div className="range-toggle">
             <Link href="/leaderboard?range=week" className={range === 'week' ? 'on' : ''}>

@@ -1,7 +1,7 @@
 // Current portfolio of a wallet (SOL + tokens it still holds).
-// Balances come from Helius (getAssetsByOwner); PRICES come from Birdeye (Helius price_info is
-// incomplete for memecoins, which made big holdings show as $0). Server-side only — reads
-// HELIUS_API_KEY + BIRDEYE_API_KEY from the runtime env (NOT exposed to the browser).
+// Balances: Helius getAssetsByOwner. Prices: MULTI-SOURCE (Jupiter + Birdeye + Helius price_info),
+// taking whichever source has a price — a single source (esp. Helius) misses memecoins like BULL,
+// which made big holdings show as $0. Server-side only; reads keys from runtime env.
 const HELIUS = process.env.HELIUS_API_KEY;
 const BIRDEYE = process.env.BIRDEYE_API_KEY;
 const SOL_MINT = 'So11111111111111111111111111111111111111112';
@@ -18,11 +18,37 @@ export interface Portfolio {
   holdings: Holding[]; // tokens, value-sorted, dust/NFTs removed
 }
 
+function chunk<T>(a: T[], n: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < a.length; i += n) out.push(a.slice(i, i + n));
+  return out;
+}
+
+/** Jupiter price API (free, no key) — the canonical Solana spot source. mint -> USD/token. */
+async function jupiterPrices(mints: string[]): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  for (const batch of chunk(mints, 100)) {
+    try {
+      const r = await fetch(`https://lite-api.jup.ag/price/v3?ids=${batch.join(',')}`, {
+        next: { revalidate: 60 },
+      });
+      const j = (await r.json()) as Record<string, { usdPrice?: number; price?: number | string }>;
+      for (const m of batch) {
+        const v = j?.[m]?.usdPrice ?? Number(j?.[m]?.price);
+        if (typeof v === 'number' && Number.isFinite(v) && v > 0) out.set(m, v);
+      }
+    } catch {
+      /* ignore a failed batch */
+    }
+  }
+  return out;
+}
+
+/** Birdeye multi_price — secondary source for anything Jupiter misses. */
 async function birdeyePrices(mints: string[]): Promise<Map<string, number>> {
   const out = new Map<string, number>();
-  if (!BIRDEYE || !mints.length) return out;
-  for (let i = 0; i < mints.length; i += 100) {
-    const batch = mints.slice(i, i + 100);
+  if (!BIRDEYE) return out;
+  for (const batch of chunk(mints, 100)) {
     try {
       const r = await fetch(
         `https://public-api.birdeye.so/defi/multi_price?list_address=${batch.join(',')}`,
@@ -31,10 +57,10 @@ async function birdeyePrices(mints: string[]): Promise<Map<string, number>> {
       const j = (await r.json()) as { data?: Record<string, { value?: number } | null> };
       for (const m of batch) {
         const v = j.data?.[m]?.value;
-        if (typeof v === 'number') out.set(m, v);
+        if (typeof v === 'number' && v > 0) out.set(m, v);
       }
     } catch {
-      /* ignore a failed batch */
+      /* ignore */
     }
   }
   return out;
@@ -64,17 +90,21 @@ export async function getHoldings(address: string): Promise<Portfolio | null> {
         nativeBalance?: { lamports?: number; total_price?: number };
         items?: Array<{
           id: string;
-          interface?: string;
           content?: { metadata?: { symbol?: string } };
-          token_info?: { symbol?: string; balance?: number; decimals?: number };
+          token_info?: {
+            symbol?: string;
+            balance?: number;
+            decimals?: number;
+            price_info?: { price_per_token?: number };
+          };
         }>;
       };
     };
     const res = j.result;
     if (!res) return null;
 
-    // 1) Fungible balances only (drop NFTs / 0-decimal 1-supply dust).
-    const raw: { symbol: string; mint: string; amount: number }[] = [];
+    // 1) Fungible balances (drop NFTs / 0-decimal dust). Remember Helius' own per-token price.
+    const raw: { symbol: string; mint: string; amount: number; heliusPx: number }[] = [];
     for (const a of res.items ?? []) {
       const ti = a.token_info;
       const dec = ti?.decimals ?? 0;
@@ -85,21 +115,26 @@ export async function getHoldings(address: string): Promise<Portfolio | null> {
         symbol: ti.symbol || a.content?.metadata?.symbol || a.id.slice(0, 4).toUpperCase(),
         mint: a.id,
         amount,
+        heliusPx: ti.price_info?.price_per_token ?? 0,
       });
     }
 
-    // 2) Real prices from Birdeye (+ SOL).
-    const prices = await birdeyePrices([SOL_MINT, ...raw.map((h) => h.mint)]);
+    // 2) Prices from Jupiter + Birdeye in parallel; combine with Helius — take whichever has it.
+    const mints = [SOL_MINT, ...raw.map((h) => h.mint)];
+    const [jup, bird] = await Promise.all([jupiterPrices(mints), birdeyePrices(mints)]);
+    const priceOf = (mint: string, heliusPx = 0): number =>
+      jup.get(mint) ?? bird.get(mint) ?? heliusPx ?? 0;
+
     const solAmount = (res.nativeBalance?.lamports ?? 0) / 1e9;
-    const solPrice = prices.get(SOL_MINT);
+    const solPx = priceOf(SOL_MINT);
     const sol = {
       amount: solAmount,
-      usd: solPrice != null ? solAmount * solPrice : (res.nativeBalance?.total_price ?? 0),
+      usd: solPx > 0 ? solAmount * solPx : (res.nativeBalance?.total_price ?? 0),
     };
 
     // 3) Value, drop sub-$1 dust, sort.
     const holdings = raw
-      .map((h) => ({ ...h, usd: (prices.get(h.mint) ?? 0) * h.amount }))
+      .map((h) => ({ symbol: h.symbol, mint: h.mint, amount: h.amount, usd: priceOf(h.mint, h.heliusPx) * h.amount }))
       .filter((h) => h.usd >= 1)
       .sort((x, y) => y.usd - x.usd);
 
