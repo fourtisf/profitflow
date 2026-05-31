@@ -40,6 +40,9 @@ export function Pricing() {
                 <Check /> Wallet radar &amp; instant alerts
               </li>
               <li className="off">
+                <Check /> Smart-money distribution alerts
+              </li>
+              <li className="off">
                 <Check /> API access
               </li>
             </ul>
@@ -62,6 +65,9 @@ export function Pricing() {
               </li>
               <li>
                 <Check /> Wallet radar &amp; instant alerts
+              </li>
+              <li>
+                <Check /> Smart-money distribution alerts
               </li>
               <li>
                 <Check /> All-time leaderboard &amp; wallet profiles
