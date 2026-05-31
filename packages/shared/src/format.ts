@@ -1,13 +1,16 @@
 // Money/identity formatting shared by web, the OG image, and the bot — so a "$1.2M" looks
 // identical everywhere. Ported from the approved landing page (fmt / full / wallet).
 
-/** Compact: $1.20M / $48.0K / $640. */
+/** Compact: $1.20M / $48.0K / $640 / $0.30 (sub-dollar buys shown, not rounded to $0). */
 export function fmtUsd(n: number): string {
-  return n >= 1e6
+  const abs = Math.abs(n);
+  return abs >= 1e6
     ? '$' + (n / 1e6).toFixed(2) + 'M'
-    : n >= 1e3
+    : abs >= 1e3
       ? '$' + (n / 1e3).toFixed(1) + 'K'
-      : '$' + Math.round(n);
+      : abs > 0 && abs < 1
+        ? '$' + n.toFixed(2)
+        : '$' + Math.round(n);
 }
 
 /** Full, grouped: $641,200. */

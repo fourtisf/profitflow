@@ -6,7 +6,7 @@ function when(ts: number): string {
 }
 
 const UNVERIFIED_HINT =
-  'Tokens arrived via transfer with unknown cost basis — we never invent a multiple, so it shows “—”.';
+  'Tokens arrived via transfer (or the buy is outside our window), so the cost basis is unknown — we never invent a multiple.';
 
 /** A static (server-rendered) list of realized exits with a "show the math" drill-down. */
 export function ExitRows({ exits }: { exits: RealizedExit[] }) {
@@ -27,9 +27,18 @@ export function ExitRows({ exits }: { exits: RealizedExit[] }) {
                 {e.walletShort}
               </Link>
               <span className="r-src">{e.source}</span>
+              <a
+                className="r-scan"
+                href={`https://solscan.io/tx/${e.sig}`}
+                target="_blank"
+                rel="noopener"
+                title="Verify this transaction on Solscan"
+              >
+                ↗ Solscan
+              </a>
             </div>
             <div className="r-meta">
-              in {fmtUsd(e.entryUsd)}
+              {e.unverifiedBasis ? 'basis unknown' : `in ${fmtUsd(e.entryUsd)}`}
               <span className="ar">→</span>out {fmtUsd(e.proceedsUsd)}
               {e.unverifiedBasis && (
                 <span className="r-unv" title={UNVERIFIED_HINT}>
@@ -59,6 +68,14 @@ export function ExitRows({ exits }: { exits: RealizedExit[] }) {
                 <div>
                   <span>Multiple</span>
                   <span>{e.multiple != null ? `${e.multiple.toFixed(2)}×` : '— (basis unverified)'}</span>
+                </div>
+                <div>
+                  <span>Verify</span>
+                  <span>
+                    <a href={`https://solscan.io/tx/${e.sig}`} target="_blank" rel="noopener">
+                      tx on Solscan ↗
+                    </a>
+                  </span>
                 </div>
               </div>
             </details>

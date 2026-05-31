@@ -1222,3 +1222,23 @@ footer {
     display: none;
   }
 }
+
+/* Solscan verify links */
+.r-scan {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--faint);
+  margin-left: 8px;
+  transition: color 0.15s;
+}
+.r-scan:hover {
+  color: var(--green);
+}
+a.addr {
+  text-decoration: none;
+  transition: border-color 0.15s, color 0.15s;
+}
+a.addr:hover {
+  color: var(--white);
+  border-color: var(--line-2);
+}

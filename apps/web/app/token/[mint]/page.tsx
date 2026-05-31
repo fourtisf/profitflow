@@ -49,7 +49,15 @@ export default async function TokenPage({ params }: { params: { mint: string } }
                 <h1 className="page-title">
                   <span className="accent">{token.ticker}</span> cash-outs
                 </h1>
-                <div className="addr">{token.mint}</div>
+                <a
+                  className="addr"
+                  href={`https://solscan.io/token/${token.mint}`}
+                  target="_blank"
+                  rel="noopener"
+                  title="Verify this token on Solscan"
+                >
+                  {token.mint} ↗
+                </a>
               </div>
               {IS_DEMO && <span className="demo-note">demo data</span>}
             </div>

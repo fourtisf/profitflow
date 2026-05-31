@@ -99,9 +99,18 @@ export function LiveFeed() {
                 <span className="tkr">{e.ticker}</span>
                 <span className="wal">{e.walletShort}</span>
                 <span className="r-src">{e.source}</span>
+                <a
+                  className="r-scan"
+                  href={`https://solscan.io/tx/${e.sig}`}
+                  target="_blank"
+                  rel="noopener"
+                  title="Verify on Solscan"
+                >
+                  ↗
+                </a>
               </div>
               <div className="r-meta">
-                in {fmtUsd(e.entryUsd)}
+                {e.unverifiedBasis ? 'basis unknown' : `in ${fmtUsd(e.entryUsd)}`}
                 <span className="ar">→</span>out {fmtUsd(e.proceedsUsd)}
                 {e.unverifiedBasis && <span className="r-unv">unverified basis</span>}
               </div>

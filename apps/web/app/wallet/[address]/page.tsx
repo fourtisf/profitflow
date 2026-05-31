@@ -53,7 +53,15 @@ export default async function WalletPage({ params }: { params: { address: string
                 <h1 className="page-title">
                   Wallet <span className="accent">{profile.walletShort}</span>
                 </h1>
-                <div className="addr">{profile.wallet}</div>
+                <a
+                  className="addr"
+                  href={`https://solscan.io/account/${profile.wallet}`}
+                  target="_blank"
+                  rel="noopener"
+                  title="Verify this wallet on Solscan"
+                >
+                  {profile.wallet} ↗
+                </a>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
                 <FollowButton wallet={profile.wallet} />

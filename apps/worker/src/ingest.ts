@@ -31,10 +31,13 @@ function classifyEvent(tokenDelta: number, valueUsd: number, ts: number, sig: st
   return { kind: 'transfer_out', amount: -tokenDelta, ts, sig };
 }
 
+const round2 = (n: number): number => Math.round(n * 100) / 100;
+
 export class HeliusIngest {
   private server: http.Server | null = null;
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
   private seen = new Set<string>(); // in-process dedupe; PG ON CONFLICT is the durable guard
+  private readonly symbolCache = new Map<string, string>(); // mint -> "$SYMBOL"
 
   constructor(private readonly deps: Deps) {}
 
@@ -62,11 +65,11 @@ export class HeliusIngest {
           id: legs.sig,
           sig: legs.sig,
           ts: legs.ts * 1000,
-          ticker: '$' + mint.slice(0, 4).toUpperCase(), // TODO: resolve real symbol via metadata
+          ticker: await this.tokenSymbol(mint),
           mint,
           wallet,
           walletShort: shortWallet(wallet),
-          entryUsd: Math.round(applied.entryUsd),
+          entryUsd: round2(applied.entryUsd), // keep cents — memecoin buys are often sub-dollar
           proceedsUsd: Math.round(applied.proceedsUsd),
           pnlUsd: Math.round(applied.realizedThisEvent),
           multiple: applied.multiple,
@@ -84,6 +87,29 @@ export class HeliusIngest {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Helius ${res.status}: ${await res.text()}`);
     return (await res.json()) as HeliusTx[];
+  }
+
+  /** Resolve a mint's real symbol via Helius DAS getAsset (cached). Falls back to the mint prefix. */
+  private async tokenSymbol(mint: string): Promise<string> {
+    const cached = this.symbolCache.get(mint);
+    if (cached) return cached;
+    let ticker = '$' + mint.slice(0, 4).toUpperCase(); // fallback when metadata is missing
+    try {
+      const res = await fetch(`https://mainnet.helius-rpc.com/?api-key=${env.heliusApiKey}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getAsset', params: { id: mint } }),
+      });
+      const j = (await res.json()) as {
+        result?: { token_info?: { symbol?: string }; content?: { metadata?: { symbol?: string } } };
+      };
+      const sym = j.result?.token_info?.symbol ?? j.result?.content?.metadata?.symbol;
+      if (sym && sym.trim()) ticker = '$' + sym.trim().replace(/^\$/, '').toUpperCase().slice(0, 12);
+    } catch {
+      /* keep fallback */
+    }
+    this.symbolCache.set(mint, ticker);
+    return ticker;
   }
 
   startPolling(): void {
