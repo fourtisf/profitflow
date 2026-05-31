@@ -7,6 +7,8 @@
 <meta name="description" content="A real-time terminal for realized profit on Solana. Watch wallets take money off the table — ranked by dollars — the moment a sell clears.">
 <meta name="theme-color" content="#08090a">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2308090a'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23ffffff' stroke-opacity='.9' stroke-width='1.8'/%3E%3Cpath d='M16 3v4M16 25v4M3 16h4M25 16h4' stroke='%23ffffff' stroke-opacity='.9' stroke-width='1.8' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%235fd39a'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="canonical" href="https://exitradar.fun/">
 <!-- Open Graph / Twitter — crawlers don't run JS, so edit the domain/image here directly -->
 <meta property="og:type" content="website">
 <meta property="og:title" content="ExitRadar — track the cash-out, not the buys">
@@ -589,7 +591,7 @@ const CONFIG={
   apiBase:'',               // base URL API PnL ('' = origin sama, lewat nginx /api)
   x:'https://x.com/exitradar_fun', // akun X ExitRadar
   telegram:'https://t.me/EXITRADAR', // grup/channel Telegram ExitRadar (kosong = link disembunyikan)
-  analytics:{plausibleDomain:''} // mis. 'exitradar.fun' → load Plausible (privacy-friendly). kosong = off
+  analytics:{plausibleDomain:'exitradar.fun'} // load Plausible (privacy-friendly). kosong = off
 };
 (function applyConfig(){
   const d=$('sc-domain');if(d)d.textContent=CONFIG.domain;
