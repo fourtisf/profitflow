@@ -29,3 +29,7 @@ coverage/
 Thumbs.db
 .vscode/
 .idea/
+
+# Wallet auto-discovery output (generated on the VPS; not source)
+scripts/watch-addresses.txt
+scripts/mints.txt
