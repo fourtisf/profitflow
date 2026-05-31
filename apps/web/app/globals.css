@@ -1158,3 +1158,28 @@ footer {
 .math-body > div > span.green {
   color: var(--green);
 }
+
+/* wallet-follow alerts (live feed) */
+.watching {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--green);
+  border: 1px solid rgba(95, 211, 154, 0.35);
+  border-radius: 6px;
+  padding: 3px 7px;
+}
+.row.alert {
+  background: rgba(95, 211, 154, 0.06);
+  box-shadow: inset 3px 0 0 var(--green);
+}
+.r-fav {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--green);
+  border: 1px solid rgba(95, 211, 154, 0.35);
+  border-radius: 5px;
+  padding: 1px 6px;
+}

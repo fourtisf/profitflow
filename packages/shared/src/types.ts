@@ -70,8 +70,10 @@ export interface TokenProfile {
 export type WsServerMessage =
   | { type: 'hello'; recent: RealizedExit[]; tier: Tier; serverTime: number }
   | { type: 'exit'; exit: RealizedExit }
+  | { type: 'alert'; exit: RealizedExit } // a wallet the client follows just cashed out
   | { type: 'ping'; t: number };
 
 export type WsClientMessage =
   | { type: 'pong'; t?: number }
-  | { type: 'setTier'; tier: Tier };
+  | { type: 'setTier'; tier: Tier }
+  | { type: 'setFollows'; wallets: string[] }; // wallets this client wants alerts for

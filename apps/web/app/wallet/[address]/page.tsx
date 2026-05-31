@@ -4,6 +4,7 @@ import { fullUsd } from '@profitflow/shared';
 import { Nav } from '../../../components/Nav';
 import { Footer } from '../../../components/Footer';
 import { ExitRows } from '../../../components/ExitRows';
+import { FollowButton } from '../../../components/FollowButton';
 import { getWallet, IS_DEMO } from '../../../lib/data';
 
 export const dynamic = 'force-dynamic';
@@ -54,7 +55,10 @@ export default async function WalletPage({ params }: { params: { address: string
                 </h1>
                 <div className="addr">{profile.wallet}</div>
               </div>
-              {IS_DEMO && <span className="demo-note">demo data</span>}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+                <FollowButton wallet={profile.wallet} />
+                {IS_DEMO && <span className="demo-note">demo data</span>}
+              </div>
             </div>
 
             <div className="statrow">

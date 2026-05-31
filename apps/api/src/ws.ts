@@ -25,6 +25,7 @@ export function attachWebSocket(server: Server, ds: DataSource): WebSocketServer
     const ws = socket as AliveSocket;
     const url = new URL(req.url ?? '/ws', 'http://localhost');
     let tier: Tier = url.searchParams.get('tier') === 'pro' ? 'pro' : 'free';
+    let followed = new Set<string>(); // wallets this client gets alerts for
 
     ws.isAlive = true;
     ws.on('pong', () => {
@@ -34,14 +35,22 @@ export function attachWebSocket(server: Server, ds: DataSource): WebSocketServer
     send(ws, { type: 'hello', recent: ds.getRecent({ tier, limit: 50 }), tier, serverTime: Date.now() });
 
     const unsubscribe = ds.onExit((exit: RealizedExit) => {
+      // A followed wallet cashing out is an ALERT — pushed regardless of size/tier gate.
+      if (followed.has(exit.wallet)) {
+        send(ws, { type: 'alert', exit });
+        return;
+      }
       if (tier === 'free' && exit.tier !== 'free') return; // gate Pro-only exits
       send(ws, { type: 'exit', exit });
     });
 
     ws.on('message', (raw) => {
       try {
-        const msg = JSON.parse(String(raw)) as { type?: string; tier?: string };
+        const msg = JSON.parse(String(raw)) as { type?: string; tier?: string; wallets?: unknown };
         if (msg.type === 'setTier') tier = msg.tier === 'pro' ? 'pro' : 'free';
+        else if (msg.type === 'setFollows' && Array.isArray(msg.wallets)) {
+          followed = new Set(msg.wallets.map((w) => String(w)).slice(0, 200)); // cap per connection
+        }
       } catch {
         /* ignore malformed client messages */
       }

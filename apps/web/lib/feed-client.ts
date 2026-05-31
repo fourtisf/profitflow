@@ -5,7 +5,12 @@ export type FeedStatus = 'connecting' | 'live' | 'reconnecting' | 'demo';
 export interface FeedHandlers {
   onHello?: (recent: RealizedExit[]) => void;
   onExit: (exit: RealizedExit) => void;
+  onAlert?: (exit: RealizedExit) => void; // a followed wallet just cashed out
   onStatus?: (status: FeedStatus) => void;
+}
+
+function shortWallet(w: string): string {
+  return w.length > 8 ? `${w.slice(0, 4)}…${w.slice(-4)}` : w;
 }
 
 /**
@@ -21,11 +26,24 @@ export class FeedClient {
   private stopped = false;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
+  private follows: string[] = [];
+
   constructor(
     private readonly url: string | undefined,
     private readonly handlers: FeedHandlers,
     private readonly tier: Tier = 'free',
-  ) {}
+    follows: string[] = [],
+  ) {
+    this.follows = follows;
+  }
+
+  /** Update the followed-wallet set; pushes it to the server if connected. */
+  setFollows(wallets: string[]): void {
+    this.follows = wallets;
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: 'setFollows', wallets }));
+    }
+  }
 
   start(): void {
     if (!this.url) {
@@ -43,15 +61,18 @@ export class FeedClient {
       ws.onopen = () => {
         this.attempts = 0;
         this.handlers.onStatus?.('live');
+        if (this.follows.length) ws.send(JSON.stringify({ type: 'setFollows', wallets: this.follows }));
       };
       ws.onmessage = (ev) => {
         try {
           const msg = JSON.parse(String(ev.data)) as
             | { type: 'hello'; recent: RealizedExit[] }
             | { type: 'exit'; exit: RealizedExit }
+            | { type: 'alert'; exit: RealizedExit }
             | { type: string };
           if (msg.type === 'hello') this.handlers.onHello?.((msg as { recent: RealizedExit[] }).recent);
           else if (msg.type === 'exit') this.handlers.onExit((msg as { exit: RealizedExit }).exit);
+          else if (msg.type === 'alert') this.handlers.onAlert?.((msg as { exit: RealizedExit }).exit);
         } catch {
           /* ignore malformed frames */
         }
@@ -90,6 +111,12 @@ export class FeedClient {
     void sim.start();
     this.handlers.onHello?.(sim.getRecent({ tier: this.tier, limit: 20 }));
     this.simUnsub = sim.onExit((exit) => {
+      // Demo: occasionally re-attribute an exit to a followed wallet so alerts are visible.
+      if (this.follows.length && this.handlers.onAlert && Math.random() < 0.3) {
+        const w = this.follows[Math.floor(Math.random() * this.follows.length)]!;
+        this.handlers.onAlert({ ...exit, wallet: w, walletShort: shortWallet(w) });
+        return;
+      }
       if (this.tier === 'free' && exit.tier !== 'free') return; // mirror live gating
       this.handlers.onExit(exit);
     });
