@@ -70,7 +70,7 @@ export function Share() {
     x.fill();
     x.fillStyle = '#fafafa';
     x.font = `600 36px ${sansFam}`;
-    x.fillText('ProfitFlow', 156, 160);
+    x.fillText('ExitRadar', 156, 160);
     x.textAlign = 'right';
     x.fillStyle = '#71717a';
     x.font = `500 22px ${monoFam}`;
@@ -126,7 +126,7 @@ export function Share() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'profitflow-' + cur.tkr.replace('$', '') + '.png';
+        a.download = 'exitradar-' + cur.tkr.replace('$', '') + '.png';
         a.click();
         URL.revokeObjectURL(url);
         setLabel('↓ Download PNG');
@@ -164,7 +164,7 @@ export function Share() {
             <div className="scard">
               <div className="sc-top">
                 <span className="sc-logo">
-                  <span className="dot" /> ProfitFlow
+                  <span className="dot" /> ExitRadar
                 </span>
                 <span className="sc-badge">REALIZED</span>
               </div>

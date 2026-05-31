@@ -2,7 +2,7 @@
   "name": "@profitflow/web",
   "version": "0.1.0",
   "private": true,
-  "description": "ProfitFlow web — landing + live feed + share-card generator + waitlist. Deploys to Vercel.",
+  "description": "ExitRadar web — landing + live feed + wallet/token/leaderboard pages + share cards + waitlist. Deploys to Vercel.",
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",

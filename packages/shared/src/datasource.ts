@@ -4,6 +4,7 @@ import type {
   LeaderboardEntry,
   LeaderboardRange,
   RealizedExit,
+  TokenProfile,
   WalletProfile,
 } from './types';
 
@@ -22,6 +23,7 @@ export interface DataSource {
   getRecent(opts?: { limit?: number; tier?: Tier }): RealizedExit[];
   getLeaderboard(range: LeaderboardRange, limit?: number): LeaderboardEntry[];
   getWallet(wallet: string): WalletProfile | null;
+  getToken(mint: string): TokenProfile | null;
 }
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -118,6 +120,28 @@ export abstract class BaseDataSource implements DataSource {
         (m, e) => (e.multiple != null && (m == null || e.multiple > m) ? e.multiple : m),
         null,
       ),
+      firstSeen: Math.min(...tss),
+      lastSeen: Math.max(...tss),
+      exits,
+    };
+  }
+
+  getToken(mint: string): TokenProfile | null {
+    const exits = this.buffer.filter((e) => e.mint === mint);
+    if (!exits.length) return null;
+    const tss = exits.map((e) => e.ts);
+    const wallets = new Set(exits.map((e) => e.wallet));
+    return {
+      mint,
+      ticker: exits[0]!.ticker,
+      realizedUsd: round(exits.reduce((s, e) => s + e.pnlUsd, 0)),
+      exitsCount: exits.length,
+      walletsCount: wallets.size,
+      bestMultiple: exits.reduce<number | null>(
+        (m, e) => (e.multiple != null && (m == null || e.multiple > m) ? e.multiple : m),
+        null,
+      ),
+      topExitUsd: round(exits.reduce((m, e) => Math.max(m, e.pnlUsd), 0)),
       firstSeen: Math.min(...tss),
       lastSeen: Math.max(...tss),
       exits,

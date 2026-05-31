@@ -41,7 +41,7 @@ export function renderShareCard(p: CardParams) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <div style={{ width: 18, height: 18, borderRadius: 9, background: '#5fd39a' }} />
-            <div style={{ fontSize: 36, fontWeight: 600, color: '#fafafa' }}>ProfitFlow</div>
+            <div style={{ fontSize: 36, fontWeight: 600, color: '#fafafa' }}>ExitRadar</div>
           </div>
           <div style={{ display: 'flex', fontSize: 22, letterSpacing: 2, color: '#71717a' }}>REALIZED</div>
         </div>

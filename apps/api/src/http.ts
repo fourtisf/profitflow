@@ -67,6 +67,16 @@ export function createApp(ds: DataSource): Express {
     res.json(profile);
   });
 
+  // A token's realized cash-outs across every wallet (within the current window).
+  app.get('/api/token/:mint', (req: Request, res: Response) => {
+    const profile = ds.getToken(req.params.mint);
+    if (!profile) {
+      res.status(404).json({ error: 'token not found in current window' });
+      return;
+    }
+    res.json(profile);
+  });
+
   // Waitlist capture (email -> store). In-memory now; Postgres-backed when DATABASE_URL is set.
   app.post('/api/waitlist', async (req: Request, res: Response) => {
     const email = String(req.body?.email ?? '');

@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   ProfitFlow design system — ported verbatim from the approved landing page.
+   ExitRadar design system — ported verbatim from the approved landing page.
    Monochrome + green only on profit numbers. Fonts come from next/font (--font-*).
    ───────────────────────────────────────────────────────────────────────────── */
 :root {
@@ -922,5 +922,161 @@ footer {
   }
   .wait {
     flex-direction: column;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Product pages: /leaderboard, /wallet/[address], /token/[mint]
+   ───────────────────────────────────────────────────────────────────────────── */
+.page {
+  padding: 56px 0 120px;
+  min-height: 70vh;
+}
+.crumb {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--faint);
+  margin-bottom: 18px;
+}
+.crumb a {
+  color: var(--muted);
+  transition: color 0.2s;
+}
+.crumb a:hover {
+  color: var(--white);
+}
+.page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 28px;
+}
+.page-title {
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--white);
+  line-height: 1.1;
+}
+.page-title .accent {
+  color: var(--green);
+}
+.page-sub {
+  color: var(--muted);
+  font-size: 15px;
+  margin-top: 8px;
+}
+.addr {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--gray);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 5px 10px;
+  word-break: break-all;
+  display: inline-block;
+  margin-top: 12px;
+}
+.demo-note {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  padding: 4px 9px;
+  white-space: nowrap;
+}
+.statrow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.stat {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  padding: 16px 18px;
+}
+.stat .k {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.stat .v {
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--white);
+  margin-top: 8px;
+  letter-spacing: -0.01em;
+}
+.stat .v.green {
+  color: var(--green);
+}
+.elist {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  overflow: hidden;
+  box-shadow: 0 30px 80px -40px rgba(0, 0, 0, 0.9);
+}
+.elist .row:last-child {
+  border-bottom: none;
+}
+.empty {
+  border: 1px dashed var(--line-2);
+  border-radius: 14px;
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+.range-toggle {
+  display: inline-flex;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 4px;
+  background: var(--panel);
+}
+.range-toggle a {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: 0.15s;
+}
+.range-toggle a:hover {
+  color: var(--white);
+}
+.range-toggle a.on {
+  color: var(--white);
+  background: var(--line-2);
+}
+.rank {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--faint);
+  width: 26px;
+  flex: none;
+}
+.row .r-top a.wlink {
+  color: var(--white);
+  font-weight: 600;
+}
+.row .r-top a.wlink:hover {
+  color: var(--green);
+}
+@media (max-width: 640px) {
+  .page-title {
+    font-size: 26px;
   }
 }

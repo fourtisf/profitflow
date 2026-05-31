@@ -52,6 +52,20 @@ export interface WalletProfile {
   exits: RealizedExit[];
 }
 
+/** One token's realized cash-outs across every wallet we've seen exit it. */
+export interface TokenProfile {
+  mint: string;
+  ticker: string;
+  realizedUsd: number; // total realized PnL across all exits of this token
+  exitsCount: number;
+  walletsCount: number; // distinct wallets that cashed out
+  bestMultiple: number | null;
+  topExitUsd: number;
+  firstSeen: number;
+  lastSeen: number;
+  exits: RealizedExit[];
+}
+
 // ── WebSocket protocol (api <-> web) ─────────────────────────────────────────
 export type WsServerMessage =
   | { type: 'hello'; recent: RealizedExit[]; tier: Tier; serverTime: number }

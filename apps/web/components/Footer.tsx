@@ -1,4 +1,6 @@
+import Link from 'next/link';
 import { SITE_HOST } from '../lib/site';
+import { Reticle } from './Logo';
 
 export function Footer() {
   return (
@@ -6,17 +8,17 @@ export function Footer() {
       <div className="wrap">
         <div className="foot">
           <div className="logo">
-            <span className="dot" /> ProfitFlow
+            <Reticle size={16} /> ExitRadar
           </div>
           <div className="fl">
-            <a href="https://x.com" target="_blank" rel="noreferrer">
+            <a href="https://x.com/exitradar_fun" target="_blank" rel="noreferrer">
               X
             </a>
-            <a href="https://t.me" target="_blank" rel="noreferrer">
+            <a href="https://t.me/EXITRADAR" target="_blank" rel="noreferrer">
               Telegram
             </a>
-            <a href="#proof">Docs</a>
-            <a href="#pricing">API</a>
+            <Link href="/leaderboard">Leaderboard</Link>
+            <Link href="/#proof">Docs</Link>
           </div>
           <div className="cc">© 2026 · {SITE_HOST}</div>
         </div>

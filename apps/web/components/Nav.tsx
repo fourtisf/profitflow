@@ -1,20 +1,23 @@
+import Link from 'next/link';
+import { Reticle } from './Logo';
+
 export function Nav() {
   return (
     <nav>
       <div className="wrap nav-in">
-        <div className="logo">
-          <span className="dot" /> ProfitFlow
-        </div>
+        <Link href="/" className="logo">
+          <Reticle size={18} /> ExitRadar
+        </Link>
         <div className="nlinks">
-          <a href="#angle">Why</a>
-          <a href="#proof">Proof</a>
-          <a href="#features">Features</a>
-          <a href="#pricing">Pricing</a>
-          <a href="#share">Share</a>
+          <Link href="/#angle">Why</Link>
+          <Link href="/#proof">Proof</Link>
+          <Link href="/#features">Features</Link>
+          <Link href="/leaderboard">Leaderboard</Link>
+          <Link href="/#pricing">Pricing</Link>
         </div>
-        <a href="#waitlist" className="btn btn-w">
+        <Link href="/#waitlist" className="btn btn-w">
           Launch App
-        </a>
+        </Link>
       </div>
     </nav>
   );

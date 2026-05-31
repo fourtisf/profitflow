@@ -9,6 +9,7 @@ export type {
   LeaderboardRange,
   LeaderboardEntry,
   WalletProfile,
+  TokenProfile,
   WsServerMessage,
   WsClientMessage,
 } from './types';
