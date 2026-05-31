@@ -1,11 +1,12 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { fullUsd } from '@profitflow/shared';
+import { fmtUsd, fullUsd } from '@profitflow/shared';
 import { Nav } from '../../../components/Nav';
 import { Footer } from '../../../components/Footer';
 import { ExitRows } from '../../../components/ExitRows';
 import { FollowButton } from '../../../components/FollowButton';
 import { getWallet, IS_DEMO } from '../../../lib/data';
+import { getHoldings, fmtAmount } from '../../../lib/holdings';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,7 +29,10 @@ export async function generateMetadata({
 }
 
 export default async function WalletPage({ params }: { params: { address: string } }) {
-  const profile = await getWallet(params.address);
+  const [profile, portfolio] = await Promise.all([
+    getWallet(params.address),
+    getHoldings(params.address),
+  ]);
 
   return (
     <>
@@ -91,6 +95,35 @@ export default async function WalletPage({ params }: { params: { address: string
                 </div>
               </div>
             </div>
+
+            {portfolio && (portfolio.sol.amount > 0 || portfolio.holdings.length > 0) && (
+              <div className="holds-wrap">
+                <div className="holds-head">
+                  Still holding <span className="muted">· {fmtUsd(portfolio.totalUsd)} total</span>
+                </div>
+                <div className="holds">
+                  <div className="hold">
+                    <span className="h-sym">SOL</span>
+                    <span className="h-amt">{fmtAmount(portfolio.sol.amount)}</span>
+                    <span className="h-usd">{fmtUsd(portfolio.sol.usd)}</span>
+                  </div>
+                  {portfolio.holdings.slice(0, 11).map((h) => (
+                    <a
+                      key={h.mint}
+                      className="hold"
+                      href={`https://solscan.io/token/${h.mint}`}
+                      target="_blank"
+                      rel="noopener"
+                      title={`${h.symbol} on Solscan`}
+                    >
+                      <span className="h-sym">{h.symbol}</span>
+                      <span className="h-amt">{fmtAmount(h.amount)}</span>
+                      <span className="h-usd">{fmtUsd(h.usd)}</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <ExitRows exits={profile.exits} />
           </>
