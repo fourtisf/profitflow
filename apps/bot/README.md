@@ -25,8 +25,12 @@ which you can open in a browser). Set `BOT_INTERVAL_MS` / `BOT_MIN_PNL_USD` to t
 The interactive bot (`alert-bot.ts`) lets users DM `/follow <wallet>` and pings them when a followed
 wallet cashes out. It subscribes to the worker's Redis exits channel (`REDIS_EXITS_CHANNEL`).
 
-DM commands: `/follow`, `/unfollow`, `/following`, `/leaderboard`. The channel "🔔 Track this wallet"
-buttons deep-link back here as `/start follow_<wallet>` and auto-follow.
+DM commands (registered with BotFather via `setMyCommands`, so the `/` menu + Menu button populate):
+`/follow`, `/unfollow`, `/following`, `/leaderboard [week|all]`, `/signals`, `/recent`, `/stats`,
+`/wallet <address>`, `/token <mint>`, `/help`. The channel "🔔 Track this wallet" buttons deep-link
+back here as `/start follow_<wallet>` and auto-follow. The read-only commands reuse the same REST API
+the channel content runs on (`/api/leaderboard`, `/api/feed/recent`, `/api/signals`, `/api/wallet`,
+`/api/token`).
 
 It also drives the **public channel** (e.g. `@EXITRADAR`) when `TELEGRAM_CHANNEL_ID` is set — the
 bot must be an **admin** of that channel with **Post Messages** permission. Five content blocks

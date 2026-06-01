@@ -98,16 +98,50 @@ function tickerLabel(t: string | null | undefined): string {
 function plural(n: number, word: string): string {
   return `${n} ${word}${n === 1 ? '' : 's'}`;
 }
+// "$GIGA" with a guaranteed leading $, or a placeholder when the ticker is missing.
+function tk(t: string | null | undefined): string {
+  return tickerLabel(t) || '$???';
+}
+function ago(ts: number): string {
+  const s = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
 
 // ── Interactive commands (DM) ─────────────────────────────────────────────────
 const HELP =
   '👋 <b>ExitRadar alerts</b>\n\n' +
   "Follow any Solana wallet — I'll DM you the moment it cashes out. 💸\n\n" +
+  '<b>Alerts</b>\n' +
   '<b>/follow</b> &lt;wallet&gt; — track a wallet\n' +
-  '<b>/following</b> — your watchlist\n' +
   '<b>/unfollow</b> &lt;wallet&gt; — stop tracking\n' +
-  '<b>/leaderboard</b> — top realized traders\n\n' +
-  'Explore the leaderboard → exitradar.fun';
+  '<b>/following</b> — your watchlist\n\n' +
+  '<b>Explore</b>\n' +
+  '<b>/leaderboard</b> [week|all] — top realized traders\n' +
+  '<b>/signals</b> — smart-money distribution right now\n' +
+  '<b>/recent</b> — latest big cash-outs\n' +
+  '<b>/stats</b> — 24h market digest\n' +
+  '<b>/wallet</b> &lt;address&gt; — a wallet’s realized PnL\n' +
+  '<b>/token</b> &lt;mint&gt; — a token’s cash-outs\n\n' +
+  'Full terminal → exitradar.fun';
+
+// Registered with BotFather (setMyCommands) so the "/" menu + Menu button populate.
+const COMMANDS = [
+  { command: 'follow', description: 'Track a wallet — DM when it cashes out' },
+  { command: 'unfollow', description: 'Stop tracking a wallet' },
+  { command: 'following', description: 'Your watchlist' },
+  { command: 'leaderboard', description: 'Top realized traders (week|all)' },
+  { command: 'signals', description: 'Smart-money distribution right now' },
+  { command: 'recent', description: 'Latest big cash-outs' },
+  { command: 'stats', description: '24h market digest' },
+  { command: 'wallet', description: "A wallet's realized PnL" },
+  { command: 'token', description: "A token's cash-outs" },
+  { command: 'help', description: 'Show all commands' },
+];
 
 async function doFollow(chatId: number, wallet: string): Promise<void> {
   await redis.sadd('er:watch', wallet);
@@ -155,8 +189,44 @@ async function handle(chatId: number, text: string): Promise<void> {
   }
 
   if (cmd === '/leaderboard') {
-    const text2 = await leaderboardText();
+    const range = arg === 'all' ? 'all' : 'week';
+    const text2 = await leaderboardText(range).catch(() => null);
     return void send(chatId, text2 ?? 'No realized trades in the window yet — check back soon.', markup([siteBtn('📊 Full leaderboard', '/leaderboard')]));
+  }
+
+  if (cmd === '/signals') {
+    const text2 = await signalsText().catch(() => null);
+    return void send(chatId, text2 ?? '🛰️ Quiet right now — no cluster exits in the last few hours.', markup([siteBtn('📊 Open ExitRadar', '/')]));
+  }
+
+  if (cmd === '/recent') {
+    const text2 = await recentText().catch(() => null);
+    return void send(chatId, text2 ?? 'No recent exits in the window yet.', markup([siteBtn('📊 Live feed', '/')]));
+  }
+
+  if (cmd === '/stats') {
+    const d = await buildDigest().catch(() => null);
+    return void send(chatId, d?.text ?? 'No exits in the last 24h yet — check back soon.', markup([siteBtn('📊 Leaderboard', '/leaderboard')]));
+  }
+
+  if (cmd === '/wallet') {
+    if (!arg || !B58.test(arg)) return void send(chatId, '⚠️ Usage: <code>/wallet &lt;address&gt;</code>');
+    const text2 = await walletText(arg).catch(() => null);
+    return void send(
+      chatId,
+      text2 ?? `No realized exits for <b>${short(arg)}</b> in the current window.`,
+      markup([trackWalletBtn(arg), siteBtn('📊 Wallet page', `/wallet/${arg}`)]),
+    );
+  }
+
+  if (cmd === '/token') {
+    if (!arg || !B58.test(arg)) return void send(chatId, '⚠️ Usage: <code>/token &lt;mint address&gt;</code>');
+    const text2 = await tokenText(arg).catch(() => null);
+    return void send(
+      chatId,
+      text2 ?? `No cash-outs for that token in the current window.`,
+      markup([siteBtn('📊 Token page', `/token/${arg}`)]),
+    );
   }
 
   return void send(chatId, 'Unknown command. Try /help');
@@ -226,6 +296,23 @@ interface SignalDto {
   realizedUsd: number;
   windowMs: number;
 }
+interface WalletDto {
+  walletShort: string;
+  realizedUsd: number;
+  bestMultiple: number | null;
+  lastSeen: number;
+  exits: ExitDto[];
+}
+interface TokenDto {
+  ticker: string;
+  realizedUsd: number;
+  exitsCount: number;
+  walletsCount: number;
+  bestMultiple: number | null;
+  topExitUsd: number;
+  lastSeen: number;
+  exits: ExitDto[];
+}
 
 async function api<T>(path: string): Promise<T> {
   const res = await fetch(`${env.apiUrl}${path}`);
@@ -233,12 +320,20 @@ async function api<T>(path: string): Promise<T> {
   return (await res.json()) as T;
 }
 
-async function leaderboardText(): Promise<string | null> {
+// Like api(), but a 404 (wallet/token not in window) resolves to null instead of throwing.
+async function apiMaybe<T>(path: string): Promise<T | null> {
+  const res = await fetch(`${env.apiUrl}${path}`);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`${path} -> HTTP ${res.status}`);
+  return (await res.json()) as T;
+}
+
+async function leaderboardText(range: 'week' | 'all' = env.leaderboardRange): Promise<string | null> {
   const { entries = [] } = await api<{ entries?: LeaderboardEntryDto[] }>(
-    `/api/leaderboard?range=${env.leaderboardRange}&limit=${env.leaderboardTopN}`,
+    `/api/leaderboard?range=${range}&limit=${env.leaderboardTopN}`,
   );
   if (!entries.length) return null;
-  const title = env.leaderboardRange === 'all' ? 'All-time top traders' : 'Top traders this week';
+  const title = range === 'all' ? 'All-time top traders' : 'Top traders this week';
   const lines = entries.map((e, i) => {
     const rank = MEDALS[i] ?? `${i + 1}.`;
     const top = tickerLabel(e.topTicker);
@@ -262,43 +357,94 @@ async function postLeaderboard(): Promise<void> {
   }
 }
 
+async function buildDigest(): Promise<{ text: string; wallet: string } | null> {
+  const { exits = [] } = await api<{ exits?: ExitDto[] }>('/api/feed/recent?tier=pro&limit=200');
+  const since = Date.now() - 24 * 60 * 60 * 1000;
+  const day = exits.filter((e) => e.ts >= since);
+  if (!day.length) return null;
+
+  const total = day.reduce((s, e) => s + e.pnlUsd, 0);
+  const wallets = new Set(day.map((e) => e.wallet)).size;
+  const biggest = day.reduce((m, e) => (e.pnlUsd > m.pnlUsd ? e : m), day[0]!);
+
+  // Most-distributed token: most distinct wallets exiting the same mint.
+  const byMint = new Map<string, { ticker: string; wallets: Set<string> }>();
+  for (const e of day) {
+    const agg = byMint.get(e.mint) ?? { ticker: e.ticker, wallets: new Set<string>() };
+    agg.wallets.add(e.wallet);
+    byMint.set(e.mint, agg);
+  }
+  const hot = [...byMint.values()].sort((a, b) => b.wallets.size - a.wallets.size)[0];
+
+  const lines = [
+    '📊 <b>ExitRadar — last 24h</b>',
+    '',
+    `💰 <b>+${fullUsd(total)}</b> realized across <b>${plural(day.length, 'exit')}</b> by <b>${plural(wallets, 'wallet')}</b>`,
+    `🏆 Biggest: <b>${biggest.walletShort}</b> +${fullUsd(biggest.pnlUsd)} on <b>${tk(biggest.ticker)}</b>${multipleTag(biggest.multiple, ' · ')}`,
+  ];
+  if (hot && hot.wallets.size >= 2) {
+    lines.push(`🔥 Most distributed: <b>${tk(hot.ticker)}</b> — ${plural(hot.wallets.size, 'wallet')} out`);
+  }
+  lines.push('', '📈 exitradar.fun/leaderboard');
+  return { text: lines.join('\n'), wallet: biggest.wallet };
+}
+
 async function postDigest(): Promise<void> {
   if (!CHANNEL || !env.enableDigest) return;
   try {
-    const { exits = [] } = await api<{ exits?: ExitDto[] }>('/api/feed/recent?tier=pro&limit=200');
-    const since = Date.now() - 24 * 60 * 60 * 1000;
-    const day = exits.filter((e) => e.ts >= since);
-    if (!day.length) return void console.log('[alert-bot] digest: no exits in 24h — skipping');
-
-    const total = day.reduce((s, e) => s + e.pnlUsd, 0);
-    const wallets = new Set(day.map((e) => e.wallet)).size;
-    const biggest = day.reduce((m, e) => (e.pnlUsd > m.pnlUsd ? e : m), day[0]!);
-
-    // Most-distributed token: most distinct wallets exiting the same mint.
-    const byMint = new Map<string, { ticker: string; wallets: Set<string> }>();
-    for (const e of day) {
-      const agg = byMint.get(e.mint) ?? { ticker: e.ticker, wallets: new Set<string>() };
-      agg.wallets.add(e.wallet);
-      byMint.set(e.mint, agg);
-    }
-    const hot = [...byMint.values()].sort((a, b) => b.wallets.size - a.wallets.size)[0];
-
-    const lines = [
-      '📊 <b>ExitRadar — last 24h</b>',
-      '',
-      `💰 <b>+${fullUsd(total)}</b> realized across <b>${plural(day.length, 'exit')}</b> by <b>${plural(wallets, 'wallet')}</b>`,
-      `🏆 Biggest: <b>${biggest.walletShort}</b> +${fullUsd(biggest.pnlUsd)} on <b>${tickerLabel(biggest.ticker) || '$' + biggest.ticker}</b>${multipleTag(biggest.multiple, ' · ')}`,
-    ];
-    if (hot && hot.wallets.size >= 2) {
-      lines.push(`🔥 Most distributed: <b>${tickerLabel(hot.ticker) || '$' + hot.ticker}</b> — ${plural(hot.wallets.size, 'wallet')} out`);
-    }
-    lines.push('', '📈 exitradar.fun/leaderboard');
-
-    await send(CHANNEL, lines.join('\n'), markup([trackWalletBtn(biggest.wallet), siteBtn('📊 Leaderboard', '/leaderboard')]));
+    const d = await buildDigest();
+    if (!d) return void console.log('[alert-bot] digest: no exits in 24h — skipping');
+    await send(CHANNEL, d.text, markup([trackWalletBtn(d.wallet), siteBtn('📊 Leaderboard', '/leaderboard')]));
     console.log('[alert-bot] posted daily digest');
   } catch (e) {
     console.error('[alert-bot] digest failed:', e instanceof Error ? e.message : e);
   }
+}
+
+// On-demand DM views (reuse the same API the channel content runs on).
+async function signalsText(): Promise<string | null> {
+  const { signals = [] } = await api<{ signals?: SignalDto[] }>(`/api/signals?minWallets=${env.signalMinWallets}`);
+  if (!signals.length) return null;
+  const hrs = Math.round((signals[0]!.windowMs ?? 21_600_000) / 3_600_000);
+  const lines = signals.slice(0, 8).map(
+    (s) => `• <b>${tk(s.ticker)}</b> — ${plural(s.wallets, 'wallet')} out · +${fullUsd(s.realizedUsd)}`,
+  );
+  return `🛰️ <b>Smart money exiting now</b> (last ${hrs}h)\n\n${lines.join('\n')}\n\n📊 exitradar.fun`;
+}
+
+async function recentText(): Promise<string | null> {
+  const { exits = [] } = await api<{ exits?: ExitDto[] }>('/api/feed/recent?tier=pro&limit=10');
+  if (!exits.length) return null;
+  const lines = exits.slice(0, 10).map(
+    (e) => `• <b>${e.walletShort}</b> +${fullUsd(e.pnlUsd)} ${tk(e.ticker)}${multipleTag(e.multiple, ' · ')} <i>${ago(e.ts)}</i>`,
+  );
+  return `🕒 <b>Latest cash-outs</b>\n\n${lines.join('\n')}\n\n📊 Live feed → exitradar.fun`;
+}
+
+async function walletText(addr: string): Promise<string | null> {
+  const p = await apiMaybe<WalletDto>(`/api/wallet/${addr}`);
+  if (!p) return null;
+  const head = [
+    `👛 <b>${p.walletShort}</b>`,
+    `💰 +${fullUsd(p.realizedUsd)} realized · ${plural(p.exits.length, 'exit')}${multipleTag(p.bestMultiple, ' · best ')}`,
+    `🕒 last cash-out ${ago(p.lastSeen)}`,
+  ];
+  const recent = p.exits
+    .slice(0, 5)
+    .map((e) => `• +${fullUsd(e.pnlUsd)} ${tk(e.ticker)}${multipleTag(e.multiple, ' · ')}`);
+  return `${head.join('\n')}\n\n${recent.join('\n')}\n\n📊 exitradar.fun/wallet/${addr}`;
+}
+
+async function tokenText(mint: string): Promise<string | null> {
+  const p = await apiMaybe<TokenDto>(`/api/token/${mint}`);
+  if (!p) return null;
+  const head = [
+    `🪙 <b>${tk(p.ticker)}</b>`,
+    `💸 +${fullUsd(p.realizedUsd)} realized · ${plural(p.exitsCount, 'exit')} · ${plural(p.walletsCount, 'wallet')}`,
+    `🏆 biggest +${fullUsd(p.topExitUsd)}${multipleTag(p.bestMultiple, ' · best ')} · last ${ago(p.lastSeen)}`,
+  ];
+  const recent = p.exits.slice(0, 5).map((e) => `• <b>${e.walletShort}</b> +${fullUsd(e.pnlUsd)}`);
+  return `${head.join('\n')}\n\n<u>Recent sellers</u>\n${recent.join('\n')}\n\n📊 exitradar.fun/token/${mint}`;
 }
 
 async function postWeekly(): Promise<void> {
@@ -390,6 +536,7 @@ async function main(): Promise<void> {
     }
   });
   await tg('deleteWebhook', {}).catch(() => {}); // ensure long-polling works
+  await tg('setMyCommands', { commands: COMMANDS }).catch(() => {}); // populate the "/" menu
   try {
     const me = await tg<{ username?: string }>('getMe', {});
     if (me.username) botUsername = me.username;
