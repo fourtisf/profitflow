@@ -101,18 +101,38 @@ interface ExitRow {
   wallet_short: string;
   pnl_usd: number;
   multiple: number | null;
+  unverified_basis?: boolean;
+}
+
+/** Public channel broadcast for a big exit. */
+function channelText(row: ExitRow): string {
+  const mult = row.multiple != null ? ` · <b>${row.multiple.toFixed(1)}×</b>` : '';
+  const unv = row.unverified_basis ? ' <i>(unverified basis)</i>' : '';
+  return (
+    `💸 <b>${row.wallet_short}</b> cashed out <b>${row.ticker}</b>\n` +
+    `realized <b>+${fullUsd(row.pnl_usd)}</b>${mult}${unv}\n\n` +
+    `🔗 <a href="https://solscan.io/tx/${row.sig}">verify</a> · ` +
+    `<a href="https://exitradar.fun/wallet/${row.wallet}">wallet</a> · ` +
+    `<a href="https://exitradar.fun/leaderboard">leaderboard</a>`
+  );
 }
 
 async function onExit(row: ExitRow): Promise<void> {
+  // 1) Public channel broadcast — big exits only (drives the @EXITRADAR feed).
+  if (env.channelId && row.pnl_usd >= env.channelMinUsd) {
+    await send(env.channelId, channelText(row));
+  }
+  // 2) Personal DM to everyone following this wallet (any size).
   const followers = await redis.smembers(`er:fw:${row.wallet}`);
-  if (!followers.length) return;
-  const mult = row.multiple != null ? ` (${row.multiple.toFixed(1)}×)` : '';
-  const text =
-    `🚨 <b>${row.wallet_short}</b> cashed out <b>${row.ticker}</b>\n` +
-    `💸 +${fullUsd(row.pnl_usd)}${mult}\n` +
-    `🔗 <a href="https://solscan.io/tx/${row.sig}">verify</a> · ` +
-    `<a href="https://exitradar.fun/wallet/${row.wallet}">wallet</a>`;
-  for (const chatId of followers) await send(chatId, text);
+  if (followers.length) {
+    const mult = row.multiple != null ? ` (${row.multiple.toFixed(1)}×)` : '';
+    const text =
+      `🚨 <b>${row.wallet_short}</b> cashed out <b>${row.ticker}</b>\n` +
+      `💸 +${fullUsd(row.pnl_usd)}${mult}\n` +
+      `🔗 <a href="https://solscan.io/tx/${row.sig}">verify</a> · ` +
+      `<a href="https://exitradar.fun/wallet/${row.wallet}">wallet</a>`;
+    for (const chatId of followers) await send(chatId, text);
+  }
 }
 
 interface TgUpdate {

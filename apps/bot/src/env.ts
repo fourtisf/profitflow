@@ -14,4 +14,7 @@ export const env = {
   // Alert bot (interactive: follow a wallet → DM when it cashes out):
   redisUrl: process.env.REDIS_URL,
   redisChannel: process.env.REDIS_EXITS_CHANNEL ?? 'profitflow:exits',
+  // Channel broadcast: auto-post exits >= this to the public channel (e.g. @EXITRADAR).
+  channelId: process.env.TELEGRAM_CHANNEL_ID ?? process.env.TELEGRAM_CHAT_ID,
+  channelMinUsd: Number(process.env.CHANNEL_MIN_USD ?? 5000),
 };
