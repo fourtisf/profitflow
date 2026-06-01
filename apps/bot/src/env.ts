@@ -11,4 +11,7 @@ export const env = {
   ),
   intervalMs: Number(process.env.BOT_INTERVAL_MS ?? 3_600_000),
   minPnlUsd: Number(process.env.BOT_MIN_PNL_USD ?? 10_000),
+  // Alert bot (interactive: follow a wallet → DM when it cashes out):
+  redisUrl: process.env.REDIS_URL,
+  redisChannel: process.env.REDIS_EXITS_CHANNEL ?? 'profitflow:exits',
 };

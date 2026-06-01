@@ -34,7 +34,7 @@ async function main(): Promise<void> {
     const positions = new PositionStore(redisState);
     const universe = new Universe(env.universeFloorUsd);
     await universe.refresh();
-    ingest = new HeliusIngest({ price, positions, emitter, universe });
+    ingest = new HeliusIngest({ price, positions, emitter, universe, redis: redisState });
     ingest.startWebhook();
     ingest.startPolling();
     console.log(
