@@ -14,4 +14,12 @@ export const env = {
   // Alert bot (interactive: follow a wallet → DM when it cashes out):
   redisUrl: process.env.REDIS_URL,
   redisChannel: process.env.REDIS_EXITS_CHANNEL ?? 'profitflow:exits',
+  // Public channel broadcast (e.g. @EXITRADAR). The interactive bot also posts big
+  // exits and a scheduled leaderboard here when TELEGRAM_CHANNEL_ID is set.
+  telegramChannelId: process.env.TELEGRAM_CHANNEL_ID, // @EXITRADAR or -100…
+  channelMinUsd: Number(process.env.CHANNEL_MIN_USD ?? 5_000),
+  // Leaderboard auto-post: keeps the channel active when big exits are rare.
+  leaderboardIntervalMs: Number(process.env.LEADERBOARD_INTERVAL_MS ?? 86_400_000), // 24h
+  leaderboardRange: (process.env.LEADERBOARD_RANGE ?? 'week') as 'week' | 'all',
+  leaderboardTopN: Number(process.env.LEADERBOARD_TOP_N ?? 10),
 };
