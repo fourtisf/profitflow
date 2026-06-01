@@ -8,12 +8,14 @@ import type { PriceSource } from './price';
 import type { PositionStore } from './positions';
 import type { Emitter } from './emit';
 import type { Universe } from './universe';
+import type { Redis } from 'ioredis';
 
 interface Deps {
   price: PriceSource;
   positions: PositionStore;
   emitter: Emitter;
   universe: Universe;
+  redis: Redis | null; // read er:watch (wallets followed via the alert bot) so we track them too
 }
 
 function mapSource(src?: string): Source {
@@ -113,16 +115,25 @@ export class HeliusIngest {
   }
 
   startPolling(): void {
-    if (!env.watchAddresses.length) {
-      console.log('[ingest] polling idle: no WATCH_ADDRESSES set (use Helius webhooks at scale).');
+    if (!env.watchAddresses.length && !this.deps.redis) {
+      console.log('[ingest] polling idle: no WATCH_ADDRESSES and no Redis follow store.');
       return;
     }
     const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
     console.log(
-      `[ingest] polling ${env.watchAddresses.length} wallets, ${env.pollSpacingMs}ms apart, every ${Math.round(env.pollIntervalMs / 1000)}s`,
+      `[ingest] polling ${env.watchAddresses.length} base wallet(s) + Redis follows (er:watch), ${env.pollSpacingMs}ms apart, every ${Math.round(env.pollIntervalMs / 1000)}s`,
     );
     const tick = async (): Promise<void> => {
-      for (const addr of env.watchAddresses) {
+      let addrs = env.watchAddresses;
+      if (this.deps.redis) {
+        try {
+          const dyn = await this.deps.redis.smembers('er:watch');
+          if (dyn.length) addrs = [...new Set([...env.watchAddresses, ...dyn])];
+        } catch (e) {
+          console.error('[ingest] could not read er:watch:', e instanceof Error ? e.message : String(e));
+        }
+      }
+      for (const addr of addrs) {
         try {
           const txs = await this.fetchRecent(addr);
           for (const tx of txs.sort((a, b) => a.timestamp - b.timestamp)) await this.processTx(tx, addr);

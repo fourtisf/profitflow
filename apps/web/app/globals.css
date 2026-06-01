@@ -152,6 +152,24 @@ nav {
   padding: 6px 13px;
   margin-bottom: 38px;
 }
+.hero-ca {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+.hero-ca > span {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--gray);
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  padding: 6px 13px;
+  white-space: nowrap;
+}
+.hero-ca b {
+  color: var(--green);
+  font-weight: 600;
+}
 .ldot {
   width: 6px;
   height: 6px;
@@ -1350,4 +1368,90 @@ a.hold:hover {
 }
 .search-go {
   white-space: nowrap;
+}
+
+/* mobile hamburger menu (desktop nav links hide below 760px) */
+.mnav {
+  display: inline-flex;
+}
+.menu-btn {
+  display: none;
+}
+.menu-panel {
+  display: none;
+}
+@media (max-width: 760px) {
+  .menu-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: var(--panel);
+    color: var(--white);
+    font-size: 17px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .menu-panel {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: rgba(8, 9, 10, 0.97);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--line);
+    padding: 8px 24px 16px;
+    z-index: 60;
+  }
+  .menu-panel a {
+    color: var(--gray);
+    font-size: 16px;
+    padding: 14px 2px;
+    border-bottom: 1px solid var(--line);
+  }
+  .menu-panel a:last-child {
+    border-bottom: none;
+  }
+  .menu-panel a:hover {
+    color: var(--white);
+  }
+  .nav-right {
+    gap: 10px;
+  }
+}
+
+/* mobile: show nav links inline (desktop-style), NO hamburger */
+@media (max-width: 760px) {
+  .menu-btn,
+  .menu-panel,
+  .mnav {
+    display: none !important;
+  }
+  .nav-in {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 11px 0 9px;
+    row-gap: 11px;
+  }
+  .nlinks {
+    display: flex;
+    order: 3;
+    flex-basis: 100%;
+    justify-content: center;
+    gap: 20px;
+    font-size: 13px;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  .nlinks a {
+    white-space: nowrap;
+  }
+  .ca-pill {
+    display: none;
+  }
 }
