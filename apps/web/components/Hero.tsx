@@ -4,6 +4,11 @@ export function Hero() {
   return (
     <header className="wrap hero">
       <div className="stagger">
+        <div className="hero-ca">
+          <span>
+            CA: <b>coming soon</b>
+          </span>
+        </div>
         <span className="badge">
           <span className="ldot" /> Live on Solana
         </span>
