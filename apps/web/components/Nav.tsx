@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Reticle } from './Logo';
+import { MobileMenu } from './MobileMenu';
 
 export function Nav() {
   return (
@@ -44,6 +45,7 @@ export function Nav() {
           <Link href="/#waitlist" className="btn btn-w">
             Launch App
           </Link>
+          <MobileMenu />
         </div>
       </div>
     </nav>

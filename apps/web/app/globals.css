@@ -1351,3 +1351,59 @@ a.hold:hover {
 .search-go {
   white-space: nowrap;
 }
+
+/* mobile hamburger menu (desktop nav links hide below 760px) */
+.mnav {
+  display: inline-flex;
+}
+.menu-btn {
+  display: none;
+}
+.menu-panel {
+  display: none;
+}
+@media (max-width: 760px) {
+  .menu-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: var(--panel);
+    color: var(--white);
+    font-size: 17px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .menu-panel {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: rgba(8, 9, 10, 0.97);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--line);
+    padding: 8px 24px 16px;
+    z-index: 60;
+  }
+  .menu-panel a {
+    color: var(--gray);
+    font-size: 16px;
+    padding: 14px 2px;
+    border-bottom: 1px solid var(--line);
+  }
+  .menu-panel a:last-child {
+    border-bottom: none;
+  }
+  .menu-panel a:hover {
+    color: var(--white);
+  }
+  /* tighten the right cluster so the hamburger + Launch App fit */
+  .nav-right {
+    gap: 10px;
+  }
+}
