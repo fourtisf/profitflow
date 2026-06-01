@@ -25,13 +25,24 @@ which you can open in a browser). Set `BOT_INTERVAL_MS` / `BOT_MIN_PNL_USD` to t
 The interactive bot (`alert-bot.ts`) lets users DM `/follow <wallet>` and pings them when a followed
 wallet cashes out. It subscribes to the worker's Redis exits channel (`REDIS_EXITS_CHANNEL`).
 
-It also drives the **public channel** (e.g. `@EXITRADAR`) when `TELEGRAM_CHANNEL_ID` is set — the
-bot must be an **admin** of that channel with **Post Messages** permission:
+DM commands: `/follow`, `/unfollow`, `/following`, `/leaderboard`. The channel "🔔 Track this wallet"
+buttons deep-link back here as `/start follow_<wallet>` and auto-follow.
 
-- **Big-exit broadcast** — every exit with `pnl_usd ≥ CHANNEL_MIN_USD` (default `5000`) is posted to
-  the channel, independent of who follows the wallet.
-- **Scheduled leaderboard** — keeps the channel active when big exits are rare. Pulls
-  `${API_URL}/api/leaderboard?range=…` and posts the top traders on a timer.
+It also drives the **public channel** (e.g. `@EXITRADAR`) when `TELEGRAM_CHANNEL_ID` is set — the
+bot must be an **admin** of that channel with **Post Messages** permission. Five content blocks
+(each toggleable with `ENABLE_*=false`):
+
+- **Big-exit broadcast** — every exit with `pnl_usd ≥ CHANNEL_MIN_USD` (default `5000`), in real time.
+- **Smart-money signals** (`ENABLE_SIGNALS`) — many distinct wallets dumping one token. Polls
+  `${API_URL}/api/signals` every `SIGNAL_INTERVAL_MS` (default 10m); deduped per token (re-announces
+  only when the cluster grows), so it never spams.
+- **Daily digest** (`ENABLE_DIGEST`) — 24h totals + the biggest exit + the most-distributed token.
+- **Leaderboard** (`ENABLE_LEADERBOARD`) — top realized traders from `/api/leaderboard`.
+- **Weekly recap** (`ENABLE_WEEKLY`) — Mondays, the week's biggest winners.
+
+Scheduling is cron-like: timed posts fire at UTC wall-clock anchors and are **idempotent across pm2
+restarts** (Redis `SET NX` guards keyed by day/week), so a restart never double-posts. A boot post
+fires the day's leaderboard + digest immediately the first time each day for instant feedback.
 
 ```bash
 TELEGRAM_BOT_TOKEN=… REDIS_URL=redis://127.0.0.1:6380 \
@@ -40,6 +51,8 @@ TELEGRAM_BOT_TOKEN=… REDIS_URL=redis://127.0.0.1:6380 \
   pnpm --filter @profitflow/bot start:alerts
 ```
 
-Leaderboard tuning: `LEADERBOARD_INTERVAL_MS` (default `86400000` = 24h), `LEADERBOARD_RANGE`
-(`week`|`all`, default `week`), `LEADERBOARD_TOP_N` (default `10`). The first leaderboard posts ~10s
-after boot, then every interval.
+Tuning (UTC hours; Indonesia = UTC+7): `LEADERBOARD_HOUR_UTC` (9), `DIGEST_HOUR_UTC` (13),
+`WEEKLY_HOUR_UTC` (10, Mondays), `SIGNAL_INTERVAL_MS` (600000), `SIGNAL_MIN_WALLETS` (3),
+`LEADERBOARD_RANGE` (`week`|`all`), `LEADERBOARD_TOP_N` (10), `MAX_SANE_MULTIPLE` (1000 — multiples
+above this are treated as unverified-basis artifacts and hidden), `BOT_USERNAME` (auto-detected via
+`getMe`, used for deep-links).

@@ -1,11 +1,22 @@
-// ExitRadar alert bot (interactive). Users DM the bot to follow Solana wallets; the moment a
-// followed wallet cashes out, they get a DM. Data flows: worker (Helius) -> Redis exits channel
-// -> this bot -> Telegram DM. Follows live in Redis so the worker dynamically tracks them.
+// ExitRadar alert bot (interactive + channel). Users DM the bot to follow Solana wallets; the
+// moment a followed wallet cashes out, they get a DM. Data flows: worker (Helius) -> Redis exits
+// channel -> this bot -> Telegram DM. Follows live in Redis so the worker dynamically tracks them.
+//
+// When TELEGRAM_CHANNEL_ID is set the same bot also drives the public channel (@EXITRADAR):
+//   • big-exit broadcast   — exits >= CHANNEL_MIN_USD, in real time
+//   • smart-money signals  — many distinct wallets dumping one token (deduped, polled)
+//   • daily digest         — 24h totals + the biggest exit
+//   • leaderboard          — top realized traders (range configurable)
+//   • weekly recap         — Mondays, the week's biggest winners
+// Scheduling is cron-like (wall-clock anchors) and idempotent via Redis SET NX guards, so pm2
+// restarts never double-post.
 //
 // Redis keys:
-//   er:watch          SET  every followed wallet (the worker polls this ∪ WATCH_ADDRESSES)
-//   er:fw:<wallet>    SET  chat IDs following that wallet
-//   er:fu:<chatId>    SET  wallets that user follows
+//   er:watch          SET     every followed wallet (the worker polls this ∪ WATCH_ADDRESSES)
+//   er:fw:<wallet>    SET     chat IDs following that wallet
+//   er:fu:<chatId>    SET     wallets that user follows
+//   er:post:<bucket>  STRING  "posted once per period" guard (NX + TTL)
+//   er:sig:<mint>     STRING  last signal strength (wallet count) posted for a token
 //
 // Run: TELEGRAM_BOT_TOKEN=... REDIS_URL=redis://127.0.0.1:6380 node dist/alert-bot.js
 import Redis from 'ioredis';
@@ -22,6 +33,7 @@ if (!env.redisUrl) {
   process.exit(1);
 }
 
+const CHANNEL = env.telegramChannelId; // falsy => channel features off
 const B58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const short = (w: string): string => (w.length > 9 ? `${w.slice(0, 4)}…${w.slice(-4)}` : w);
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
@@ -31,6 +43,9 @@ const sub = new Redis(env.redisUrl, { maxRetriesPerRequest: 3 });
 redis.on('error', (e) => console.error('[alert-bot] redis:', e.message));
 sub.on('error', (e) => console.error('[alert-bot] redis(sub):', e.message));
 
+let botUsername = env.botUsername; // refined via getMe at boot
+
+// ── Telegram helpers ─────────────────────────────────────────────────────────
 async function tg<T = unknown>(method: string, body: Record<string, unknown>): Promise<T> {
   const res = await fetch(`https://api.telegram.org/bot${TOKEN}/${method}`, {
     method: 'POST',
@@ -42,39 +57,87 @@ async function tg<T = unknown>(method: string, body: Record<string, unknown>): P
   return j.result as T;
 }
 
-function send(chatId: number | string, text: string): Promise<unknown> {
+type InlineButton = { text: string; url: string };
+function markup(...rows: InlineButton[][]): Record<string, unknown> {
+  return { reply_markup: { inline_keyboard: rows } };
+}
+
+function send(
+  chatId: number | string,
+  text: string,
+  extra: Record<string, unknown> = {},
+): Promise<unknown> {
   return tg('sendMessage', {
     chat_id: chatId,
     text,
     parse_mode: 'HTML',
     disable_web_page_preview: true,
+    ...extra,
   }).catch((e) => console.error('[alert-bot] send failed:', e instanceof Error ? e.message : e));
 }
 
+// "Track this wallet" deep-link → opens the bot and auto-follows on /start.
+function trackWalletBtn(wallet: string): InlineButton {
+  return { text: '🔔 Track this wallet', url: `https://t.me/${botUsername}?start=follow_${wallet}` };
+}
+function siteBtn(text: string, path: string): InlineButton {
+  return { text, url: `https://exitradar.fun${path}` };
+}
+
+// ── Display helpers (hide unverified-basis artifacts) ─────────────────────────
+// A "multiple" above maxSaneMultiple almost always means cost basis ≈ 0 (unverified) — hide it
+// rather than print a nonsense "8657×".
+function multipleTag(m: number | null | undefined, sep = ' '): string {
+  if (m == null || !Number.isFinite(m) || m <= 0 || m > env.maxSaneMultiple) return '';
+  return `${sep}${m.toFixed(1)}×`;
+}
+function tickerLabel(t: string | null | undefined): string {
+  const s = (t ?? '').trim();
+  return s ? s.replace(/^\$?/, '$') : '';
+}
+function plural(n: number, word: string): string {
+  return `${n} ${word}${n === 1 ? '' : 's'}`;
+}
+
+// ── Interactive commands (DM) ─────────────────────────────────────────────────
 const HELP =
   '👋 <b>ExitRadar alerts</b>\n\n' +
   "Follow any Solana wallet — I'll DM you the moment it cashes out. 💸\n\n" +
   '<b>/follow</b> &lt;wallet&gt; — track a wallet\n' +
   '<b>/following</b> — your watchlist\n' +
-  '<b>/unfollow</b> &lt;wallet&gt; — stop tracking\n\n' +
+  '<b>/unfollow</b> &lt;wallet&gt; — stop tracking\n' +
+  '<b>/leaderboard</b> — top realized traders\n\n' +
   'Explore the leaderboard → exitradar.fun';
+
+async function doFollow(chatId: number, wallet: string): Promise<void> {
+  await redis.sadd('er:watch', wallet);
+  await redis.sadd(`er:fw:${wallet}`, String(chatId));
+  await redis.sadd(`er:fu:${chatId}`, wallet);
+  await send(
+    chatId,
+    `✅ Following <b>${short(wallet)}</b>.\nI'll ping you the moment it cashes out.`,
+    markup([siteBtn('📊 Wallet page', `/wallet/${wallet}`)]),
+  );
+}
 
 async function handle(chatId: number, text: string): Promise<void> {
   const parts = text.trim().split(/\s+/);
   const cmd = parts[0]!.toLowerCase().replace(/@.*$/, ''); // strip @botname mentions
   const arg = parts[1];
 
-  if (cmd === '/start' || cmd === '/help') return void send(chatId, HELP);
+  if (cmd === '/start') {
+    // Deep-link: /start follow_<wallet> (from a channel "track this wallet" button).
+    if (arg?.startsWith('follow_')) {
+      const wallet = arg.slice('follow_'.length);
+      if (B58.test(wallet)) return void doFollow(chatId, wallet);
+    }
+    return void send(chatId, HELP);
+  }
+  if (cmd === '/help') return void send(chatId, HELP);
 
   if (cmd === '/follow') {
     if (!arg || !B58.test(arg)) return void send(chatId, '⚠️ Usage: <code>/follow &lt;wallet address&gt;</code>');
-    await redis.sadd('er:watch', arg);
-    await redis.sadd(`er:fw:${arg}`, String(chatId));
-    await redis.sadd(`er:fu:${chatId}`, arg);
-    return void send(
-      chatId,
-      `✅ Following <b>${short(arg)}</b>.\nI'll ping you the moment it cashes out.\n\n📊 exitradar.fun/wallet/${arg}`,
-    );
+    return void doFollow(chatId, arg);
   }
 
   if (cmd === '/unfollow') {
@@ -91,75 +154,227 @@ async function handle(chatId: number, text: string): Promise<void> {
     return void send(chatId, '👀 <b>Following</b>\n' + ws.map((w) => `• <code>${short(w)}</code>`).join('\n'));
   }
 
+  if (cmd === '/leaderboard') {
+    const text2 = await leaderboardText();
+    return void send(chatId, text2 ?? 'No realized trades in the window yet — check back soon.', markup([siteBtn('📊 Full leaderboard', '/leaderboard')]));
+  }
+
   return void send(chatId, 'Unknown command. Try /help');
 }
 
+// ── Real-time exit relay (DM followers + big-exit channel broadcast) ──────────
 interface ExitRow {
   sig: string;
+  ts: number;
   ticker: string;
+  mint: string;
   wallet: string;
   wallet_short: string;
   pnl_usd: number;
   multiple: number | null;
 }
 
-async function onExit(row: ExitRow): Promise<void> {
-  const mult = row.multiple != null ? ` (${row.multiple.toFixed(1)}×)` : '';
-  const text =
-    `🚨 <b>${row.wallet_short}</b> cashed out <b>${row.ticker}</b>\n` +
-    `💸 +${fullUsd(row.pnl_usd)}${mult}\n` +
+function exitText(row: ExitRow): string {
+  const tk = tickerLabel(row.ticker) || '$' + (row.ticker || '???');
+  return (
+    `🚨 <b>${row.wallet_short}</b> cashed out <b>${tk}</b>\n` +
+    `💸 +${fullUsd(row.pnl_usd)}${multipleTag(row.multiple, ' · ')}\n` +
     `🔗 <a href="https://solscan.io/tx/${row.sig}">verify</a> · ` +
-    `<a href="https://exitradar.fun/wallet/${row.wallet}">wallet</a>`;
+    `<a href="https://exitradar.fun/wallet/${row.wallet}">wallet</a>`
+  );
+}
+
+async function onExit(row: ExitRow): Promise<void> {
+  const text = exitText(row);
 
   // 1) DM every follower of this wallet.
   const followers = await redis.smembers(`er:fw:${row.wallet}`);
   for (const chatId of followers) await send(chatId, text);
 
   // 2) Broadcast big exits to the public channel (independent of followers).
-  if (env.telegramChannelId && row.pnl_usd >= env.channelMinUsd) {
-    await send(env.telegramChannelId, text);
+  if (CHANNEL && row.pnl_usd >= env.channelMinUsd) {
+    await send(CHANNEL, text, markup([trackWalletBtn(row.wallet)]));
   }
 }
 
+// ── Channel auto-content ──────────────────────────────────────────────────────
+const MEDALS = ['🥇', '🥈', '🥉'];
+
 interface LeaderboardEntryDto {
+  wallet: string;
   walletShort: string;
   realizedUsd: number;
   exits: number;
   bestMultiple: number | null;
   topTicker: string;
 }
+interface ExitDto {
+  sig: string;
+  ts: number;
+  ticker: string;
+  mint: string;
+  wallet: string;
+  walletShort: string;
+  pnlUsd: number;
+  multiple: number | null;
+}
+interface SignalDto {
+  mint: string;
+  ticker: string;
+  wallets: number;
+  exits: number;
+  realizedUsd: number;
+  windowMs: number;
+}
 
-const MEDALS = ['🥇', '🥈', '🥉'];
+async function api<T>(path: string): Promise<T> {
+  const res = await fetch(`${env.apiUrl}${path}`);
+  if (!res.ok) throw new Error(`${path} -> HTTP ${res.status}`);
+  return (await res.json()) as T;
+}
+
+async function leaderboardText(): Promise<string | null> {
+  const { entries = [] } = await api<{ entries?: LeaderboardEntryDto[] }>(
+    `/api/leaderboard?range=${env.leaderboardRange}&limit=${env.leaderboardTopN}`,
+  );
+  if (!entries.length) return null;
+  const title = env.leaderboardRange === 'all' ? 'All-time top traders' : 'Top traders this week';
+  const lines = entries.map((e, i) => {
+    const rank = MEDALS[i] ?? `${i + 1}.`;
+    const top = tickerLabel(e.topTicker);
+    const tail = [plural(e.exits, 'exit'), multipleTag(e.bestMultiple).trim(), top && `top ${top}`]
+      .filter(Boolean)
+      .join(' · ');
+    return `${rank} <b>${e.walletShort}</b> — +${fullUsd(e.realizedUsd)} (${tail})`;
+  });
+  return `🏆 <b>ExitRadar — ${title}</b>\n\n${lines.join('\n')}\n\n📊 Full leaderboard → exitradar.fun`;
+}
 
 async function postLeaderboard(): Promise<void> {
-  if (!env.telegramChannelId) return;
+  if (!CHANNEL || !env.enableLeaderboard) return;
   try {
-    const url = `${env.apiUrl}/api/leaderboard?range=${env.leaderboardRange}&limit=${env.leaderboardTopN}`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`leaderboard HTTP ${res.status}`);
-    const data = (await res.json()) as { entries?: LeaderboardEntryDto[] };
-    const entries = data.entries ?? [];
-    if (!entries.length) {
-      console.log('[alert-bot] leaderboard empty — skipping channel post');
-      return;
-    }
-    const title = env.leaderboardRange === 'all' ? 'All-time top traders' : 'Top traders this week';
-    const lines = entries.map((e, i) => {
-      const rank = MEDALS[i] ?? `${i + 1}.`;
-      const mult = e.bestMultiple != null ? ` · ${e.bestMultiple.toFixed(1)}×` : '';
-      return `${rank} <b>${e.walletShort}</b> — +${fullUsd(e.realizedUsd)} (${e.exits} exits${mult}, top ${e.topTicker})`;
-    });
-    const text =
-      `🏆 <b>ExitRadar — ${title}</b>\n\n` +
-      lines.join('\n') +
-      `\n\n📊 Full leaderboard → <a href="https://exitradar.fun/leaderboard">exitradar.fun</a>`;
-    await send(env.telegramChannelId, text);
-    console.log(`[alert-bot] posted leaderboard (${entries.length} entries) to ${env.telegramChannelId}`);
+    const text = await leaderboardText();
+    if (!text) return void console.log('[alert-bot] leaderboard empty — skipping');
+    await send(CHANNEL, text, markup([siteBtn('📊 Full leaderboard', '/leaderboard')]));
+    console.log('[alert-bot] posted leaderboard');
   } catch (e) {
-    console.error('[alert-bot] leaderboard post failed:', e instanceof Error ? e.message : e);
+    console.error('[alert-bot] leaderboard failed:', e instanceof Error ? e.message : e);
   }
 }
 
+async function postDigest(): Promise<void> {
+  if (!CHANNEL || !env.enableDigest) return;
+  try {
+    const { exits = [] } = await api<{ exits?: ExitDto[] }>('/api/feed/recent?tier=pro&limit=200');
+    const since = Date.now() - 24 * 60 * 60 * 1000;
+    const day = exits.filter((e) => e.ts >= since);
+    if (!day.length) return void console.log('[alert-bot] digest: no exits in 24h — skipping');
+
+    const total = day.reduce((s, e) => s + e.pnlUsd, 0);
+    const wallets = new Set(day.map((e) => e.wallet)).size;
+    const biggest = day.reduce((m, e) => (e.pnlUsd > m.pnlUsd ? e : m), day[0]!);
+
+    // Most-distributed token: most distinct wallets exiting the same mint.
+    const byMint = new Map<string, { ticker: string; wallets: Set<string> }>();
+    for (const e of day) {
+      const agg = byMint.get(e.mint) ?? { ticker: e.ticker, wallets: new Set<string>() };
+      agg.wallets.add(e.wallet);
+      byMint.set(e.mint, agg);
+    }
+    const hot = [...byMint.values()].sort((a, b) => b.wallets.size - a.wallets.size)[0];
+
+    const lines = [
+      '📊 <b>ExitRadar — last 24h</b>',
+      '',
+      `💰 <b>+${fullUsd(total)}</b> realized across <b>${plural(day.length, 'exit')}</b> by <b>${plural(wallets, 'wallet')}</b>`,
+      `🏆 Biggest: <b>${biggest.walletShort}</b> +${fullUsd(biggest.pnlUsd)} on <b>${tickerLabel(biggest.ticker) || '$' + biggest.ticker}</b>${multipleTag(biggest.multiple, ' · ')}`,
+    ];
+    if (hot && hot.wallets.size >= 2) {
+      lines.push(`🔥 Most distributed: <b>${tickerLabel(hot.ticker) || '$' + hot.ticker}</b> — ${plural(hot.wallets.size, 'wallet')} out`);
+    }
+    lines.push('', '📈 exitradar.fun/leaderboard');
+
+    await send(CHANNEL, lines.join('\n'), markup([trackWalletBtn(biggest.wallet), siteBtn('📊 Leaderboard', '/leaderboard')]));
+    console.log('[alert-bot] posted daily digest');
+  } catch (e) {
+    console.error('[alert-bot] digest failed:', e instanceof Error ? e.message : e);
+  }
+}
+
+async function postWeekly(): Promise<void> {
+  if (!CHANNEL || !env.enableWeekly) return;
+  try {
+    const { entries = [] } = await api<{ entries?: LeaderboardEntryDto[] }>('/api/leaderboard?range=week&limit=100');
+    if (!entries.length) return void console.log('[alert-bot] weekly: empty — skipping');
+    const total = entries.reduce((s, e) => s + e.realizedUsd, 0);
+    const podium = entries.slice(0, 3).map((e, i) => {
+      const top = tickerLabel(e.topTicker);
+      return `${MEDALS[i]} <b>${e.walletShort}</b> — +${fullUsd(e.realizedUsd)}${top ? ` (top ${top})` : ''}`;
+    });
+    const text =
+      `🗓️ <b>ExitRadar — Weekly recap</b>\n\n` +
+      `This week, top traders realized <b>+${fullUsd(total)}</b> across <b>${plural(entries.length, 'wallet')}</b>.\n\n` +
+      `${podium.join('\n')}\n\n📊 Full board → exitradar.fun/leaderboard`;
+    await send(CHANNEL, text, markup([siteBtn('📊 Full leaderboard', '/leaderboard')]));
+    console.log('[alert-bot] posted weekly recap');
+  } catch (e) {
+    console.error('[alert-bot] weekly failed:', e instanceof Error ? e.message : e);
+  }
+}
+
+// Smart-money signals: many distinct wallets dumping one token. Deduped so the channel only
+// hears about a cluster when it FIRST forms and each time it grows stronger (more wallets).
+async function pollSignals(): Promise<void> {
+  if (!CHANNEL || !env.enableSignals) return;
+  try {
+    const { signals = [] } = await api<{ signals?: SignalDto[] }>(`/api/signals?minWallets=${env.signalMinWallets}`);
+    for (const s of signals) {
+      const key = `er:sig:${s.mint}`;
+      const prevWallets = Number((await redis.get(key)) ?? 0);
+      if (s.wallets <= prevWallets) continue; // already announced at this strength
+      await redis.set(key, String(s.wallets), 'PX', Math.max(s.windowMs, 60_000));
+      const tk = tickerLabel(s.ticker) || '$' + s.ticker;
+      const hrs = Math.round(s.windowMs / 3_600_000);
+      const text =
+        `🛰️ <b>Smart money exiting ${tk}</b>\n` +
+        `👛 <b>${plural(s.wallets, 'wallet')}</b> cashed out · ${plural(s.exits, 'exit')} · +${fullUsd(s.realizedUsd)} realized (${hrs}h)\n` +
+        `🔗 <a href="https://exitradar.fun/token/${s.mint}">who's selling →</a>`;
+      await send(CHANNEL, text, markup([siteBtn(`📊 ${tk}`, `/token/${s.mint}`), siteBtn('🛰️ More signals', '/')]));
+      console.log(`[alert-bot] posted signal ${tk} (${s.wallets} wallets)`);
+    }
+  } catch (e) {
+    console.error('[alert-bot] signals failed:', e instanceof Error ? e.message : e);
+  }
+}
+
+// ── Cron-like scheduling (UTC wall-clock anchors, restart-safe via SET NX) ─────
+function dayBucket(): string {
+  return new Date().toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
+}
+function weekBucket(): string {
+  // ISO-ish week key; good enough to fire a recap once per calendar week.
+  const d = new Date();
+  const onejan = Date.UTC(d.getUTCFullYear(), 0, 1);
+  const week = Math.floor((d.getTime() - onejan) / (7 * 24 * 3600 * 1000));
+  return `${d.getUTCFullYear()}W${week}`;
+}
+
+// Run fn at most once per bucket across all restarts (atomic SET NX with a TTL).
+async function once(bucket: string, fn: () => Promise<void>): Promise<void> {
+  const ok = await redis.set(`er:post:${bucket}`, '1', 'EX', 8 * 24 * 3600, 'NX');
+  if (ok === 'OK') await fn();
+}
+
+async function cronTick(): Promise<void> {
+  const now = new Date();
+  const h = now.getUTCHours();
+  const day = dayBucket();
+  if (h === env.leaderboardHourUtc) await once(`lb:${day}`, postLeaderboard);
+  if (h === env.digestHourUtc) await once(`digest:${day}`, postDigest);
+  if (now.getUTCDay() === 1 && h === env.weeklyHourUtc) await once(`weekly:${weekBucket()}`, postWeekly);
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
 interface TgUpdate {
   update_id: number;
   message?: { text?: string; chat?: { id?: number } };
@@ -175,16 +390,30 @@ async function main(): Promise<void> {
     }
   });
   await tg('deleteWebhook', {}).catch(() => {}); // ensure long-polling works
-  console.log(`[alert-bot] live — relaying "${env.redisChannel}" to followers; commands via long-poll.`);
+  try {
+    const me = await tg<{ username?: string }>('getMe', {});
+    if (me.username) botUsername = me.username;
+  } catch {
+    /* keep env fallback */
+  }
+  console.log(`[alert-bot] live — relaying "${env.redisChannel}" to followers; commands via long-poll (bot=@${botUsername}).`);
 
-  if (env.telegramChannelId) {
+  if (CHANNEL) {
     console.log(
-      `[alert-bot] channel broadcast on: exits ≥ $${env.channelMinUsd} → ${env.telegramChannelId}; ` +
-        `leaderboard every ${Math.round(env.leaderboardIntervalMs / 3_600_000)}h.`,
+      `[alert-bot] channel ${CHANNEL}: big-exit ≥ $${env.channelMinUsd}` +
+        `${env.enableSignals ? `, signals every ${Math.round(env.signalIntervalMs / 60000)}m` : ''}` +
+        `${env.enableLeaderboard ? `, leaderboard ${env.leaderboardHourUtc}:00Z` : ''}` +
+        `${env.enableDigest ? `, digest ${env.digestHourUtc}:00Z` : ''}` +
+        `${env.enableWeekly ? `, weekly Mon ${env.weeklyHourUtc}:00Z` : ''} (UTC).`,
     );
-    // Kick off one leaderboard shortly after boot, then on a fixed interval.
-    setTimeout(() => void postLeaderboard(), 10_000);
-    setInterval(() => void postLeaderboard(), env.leaderboardIntervalMs);
+    // Immediate, idempotent boot post so a restart shows life right away (and dedupes per day).
+    setTimeout(() => {
+      void once(`lb:${dayBucket()}`, postLeaderboard);
+      void once(`digest:${dayBucket()}`, postDigest);
+      void pollSignals();
+    }, 8_000);
+    setInterval(() => void cronTick(), env.cronTickMs);
+    if (env.enableSignals) setInterval(() => void pollSignals(), env.signalIntervalMs);
   }
 
   let offset = 0;
