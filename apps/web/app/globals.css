@@ -1402,8 +1402,38 @@ a.hold:hover {
   .menu-panel a:hover {
     color: var(--white);
   }
-  /* tighten the right cluster so the hamburger + Launch App fit */
   .nav-right {
     gap: 10px;
+  }
+}
+
+/* mobile: show nav links inline (desktop-style), NO hamburger */
+@media (max-width: 760px) {
+  .menu-btn,
+  .menu-panel,
+  .mnav {
+    display: none !important;
+  }
+  .nav-in {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 11px 0 9px;
+    row-gap: 11px;
+  }
+  .nlinks {
+    display: flex;
+    order: 3;
+    flex-basis: 100%;
+    justify-content: center;
+    gap: 20px;
+    font-size: 13px;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  .nlinks a {
+    white-space: nowrap;
+  }
+  .ca-pill {
+    display: none;
   }
 }
